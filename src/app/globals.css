@@ -224,16 +224,16 @@
     color: transparent;
   }
 
-  /* Sign-tinted aurora background (transform/opacity only). */
+  /* Sign-tinted aurora background with rich celestial luminosity */
   .aurora {
     position: absolute;
     inset: -20%;
     pointer-events: none;
     background:
-      radial-gradient(40% 35% at 20% 30%, color-mix(in oklab, var(--z-g2) 55%, transparent), transparent 70%),
-      radial-gradient(35% 40% at 80% 20%, color-mix(in oklab, var(--z-g3) 40%, transparent), transparent 70%),
-      radial-gradient(50% 45% at 50% 85%, color-mix(in oklab, var(--z-g1) 85%, transparent), transparent 70%);
-    filter: blur(40px);
+      radial-gradient(50% 45% at 20% 28%, color-mix(in oklab, var(--z-glow) 38%, rgba(36, 58, 106, 0.55)), transparent 75%),
+      radial-gradient(45% 42% at 80% 22%, color-mix(in oklab, var(--z-g3) 38%, rgba(196, 160, 68, 0.35)), transparent 72%),
+      radial-gradient(55% 50% at 50% 85%, color-mix(in oklab, var(--z-primary) 32%, transparent), transparent 75%);
+    filter: blur(50px);
     animation: var(--animate-aurora);
   }
 
@@ -256,13 +256,13 @@
     translate: 120% 0;
   }
 
-  /* Film-like vignette for hero sections. */
+  /* Gentle celestial vignette for hero sections: softens corners without dimming center text */
   .vignette::after {
     content: "";
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(120% 90% at 50% 40%, transparent 55%, rgb(0 0 0 / 0.45) 100%);
+    background: radial-gradient(130% 95% at 50% 40%, transparent 65%, rgb(0 0 0 / 0.3) 100%);
   }
 
   .eyebrow {

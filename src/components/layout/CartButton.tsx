@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
-import { useCartCount } from "@/lib/cart-store";
+import { cart, useCartCount } from "@/lib/cart-store";
 
 export function CartButton() {
   const count = useCartCount();
   return (
     <Link
       href="/cart"
+      onClick={(e) => {
+        if (!e.metaKey && !e.ctrlKey && !e.shiftKey) {
+          e.preventDefault();
+          cart.openDrawer();
+        }
+      }}
       className="relative grid size-11 place-items-center rounded-full text-fg transition-colors hover:text-gold"
       aria-label={count ? `Bag, ${count} item${count > 1 ? "s" : ""}` : "Bag, empty"}
     >

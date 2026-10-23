@@ -86,21 +86,34 @@ function ZodiacRing() {
 export function CelestialBackdrop() {
   return (
     <div aria-hidden className="celestial pointer-events-none fixed inset-0 -z-30 overflow-hidden">
-      {/* Sign-tinted nebula + vignette */}
-      <div className="absolute inset-0" style={{ background: "radial-gradient(120% 70% at 70% -10%, color-mix(in oklab, var(--z-g2) 32%, transparent), transparent 62%), radial-gradient(90% 60% at 0% 110%, color-mix(in oklab, var(--z-g3) 14%, transparent), transparent 60%)" }} />
+      {/* Sign-tinted luminous nebula layers */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(110% 75% at 75% -5%, color-mix(in oklab, var(--z-glow) 26%, transparent), transparent 65%), radial-gradient(95% 65% at 5% 105%, color-mix(in oklab, var(--z-primary) 22%, transparent), transparent 65%), radial-gradient(85% 60% at 50% 45%, rgba(196,160,68,0.08), transparent 75%)",
+        }}
+      />
+      {/* Subtle cosmic starlight glow in upper center */}
+      <div
+        className="absolute left-1/2 top-0 -translate-x-1/2 h-[70vh] w-[90vw] blur-[140px] opacity-35"
+        style={{
+          background: "radial-gradient(ellipse at top, rgba(212,175,55,0.18) 0%, rgba(45,70,120,0.12) 50%, transparent 80%)",
+        }}
+      />
       {/* Far stars: slowest */}
-      <div data-parallax-root="0.06" className="absolute inset-x-0 top-0 h-[170vh] opacity-80" style={{ "--pr-speed": 0.06 } as React.CSSProperties}>
-        <Stars id="stars-far" tile={420} count={30} salt={11} maxR={0.7} twinkles={5} />
+      <div data-parallax-root="0.06" className="absolute inset-x-0 top-0 h-[170vh] opacity-90" style={{ "--pr-speed": 0.06 } as React.CSSProperties}>
+        <Stars id="stars-far" tile={420} count={32} salt={11} maxR={0.8} twinkles={6} />
       </div>
       {/* Near stars: faster, brighter */}
       <div data-parallax-root="0.16" className="absolute inset-x-0 top-0 h-[190vh]" style={{ "--pr-speed": 0.16 } as React.CSSProperties}>
-        <Stars id="stars-near" tile={640} count={12} salt={29} maxR={1.1} twinkles={8} />
+        <Stars id="stars-near" tile={640} count={16} salt={29} maxR={1.2} twinkles={10} />
       </div>
-      {/* Celestial clockwork: turns as you scroll */}
-      <div className="zodiac-ring absolute -right-[38vmin] top-[8vh] aspect-square w-[120vmin] opacity-[0.07]">
+      {/* Celestial clockwork: turns gracefully as you scroll, delicately visible */}
+      <div className="zodiac-ring absolute -right-[38vmin] top-[8vh] aspect-square w-[120vmin] opacity-[0.14] transition-opacity duration-700">
         <ZodiacRing />
       </div>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(130% 100% at 50% 40%, transparent 55%, rgb(0 0 0 / .55) 100%)" }} />
+      <div className="absolute inset-0" style={{ background: "radial-gradient(130% 100% at 50% 40%, transparent 65%, rgb(0 0 0 / .35) 100%)" }} />
     </div>
   );
 }

@@ -108,27 +108,27 @@ function Hero() {
 
       {/* Radiant celestial ambient light effects */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        {/* Luminous warm golden aura behind the zodiac wheel */}
+        {/* Warm golden aura behind the zodiac wheel */}
         <div
-          className="animate-celestial-glow absolute -right-[8%] top-1/2 -translate-y-1/2 h-[720px] w-[720px] rounded-full blur-[90px]"
+          className="animate-celestial-glow absolute -right-[8%] top-1/2 -translate-y-1/2 h-[760px] w-[760px] rounded-full blur-[90px]"
           style={{
             background:
-              "radial-gradient(circle, rgba(196,160,68,0.3) 0%, rgba(212,175,55,0.14) 38%, transparent 70%)",
+              "radial-gradient(circle, rgba(196,160,68,0.36) 0%, rgba(212,175,55,0.18) 40%, rgba(50,75,130,0.15) 65%, transparent 75%)",
           }}
         />
-        {/* Soft amber illumination behind the headline */}
+        {/* Radiant celestial illumination directly illuminating the headline & content */}
         <div
-          className="absolute -left-[6%] top-[20%] h-[550px] w-[550px] rounded-full blur-[100px] opacity-70"
+          className="absolute -left-[5%] top-[15%] h-[680px] w-[680px] rounded-full blur-[110px]"
           style={{
             background:
-              "radial-gradient(circle, rgba(196,160,68,0.2) 0%, rgba(160,120,40,0.06) 50%, transparent 75%)",
+              "radial-gradient(circle at 45% 45%, rgba(212,175,55,0.26) 0%, rgba(196,160,68,0.16) 38%, rgba(42,70,128,0.22) 65%, transparent 80%)",
           }}
         />
         {/* Central divine light bloom */}
         <div
-          className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[950px] blur-[120px] opacity-40"
+          className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[550px] w-[1000px] blur-[130px] opacity-50"
           style={{
-            background: "radial-gradient(ellipse at center, rgba(196,160,68,0.22) 0%, transparent 65%)",
+            background: "radial-gradient(ellipse at center, rgba(212,175,55,0.22) 0%, rgba(196,160,68,0.1) 45%, transparent 70%)",
           }}
         />
       </div>
@@ -136,20 +136,24 @@ function Hero() {
       <div className="mx-auto grid min-h-[calc(100dvh-5rem)] max-w-[1360px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:py-10">
         <Parallax speed={-0.18}>
           <Depth strength={6} className="flex flex-col items-start gap-7">
-            <p className="eyebrow">Extrait de Parfum · Twelve signs · Made in India</p>
-            <h1 className="font-display text-[clamp(2.75rem,7vw,6.25rem)] leading-[0.95] tracking-tight">
+            <p className="eyebrow text-gold-light/95 tracking-[0.28em] font-medium text-xs drop-shadow-[0_2px_10px_rgba(212,175,55,0.3)]">
+              Extrait de Parfum · Twelve signs · Made in India
+            </p>
+            <h1 className="font-display text-[clamp(2.75rem,7vw,6.25rem)] leading-[0.95] tracking-tight text-ivory drop-shadow-[0_4px_30px_rgba(0,0,0,0.7)]">
               A fragrance
               <br />
-              <em className="text-foil animate-shimmer not-italic">written in your stars</em>
+              <em className="text-foil animate-shimmer not-italic drop-shadow-[0_0_35px_rgba(212,175,55,0.4)]">
+                written in your stars
+              </em>
             </h1>
-            <p className="text-muted max-w-md text-base leading-relaxed sm:text-lg">
+            <p className="text-ivory/85 max-w-lg text-base sm:text-lg font-light leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
               Twelve signatures, one for every rashi. Each composed around the element, planet and temperament of its sign.
             </p>
-            <div className="flex flex-wrap gap-3">
-              <ButtonLink href="/find-my-sign">
+            <div className="flex flex-wrap items-center gap-3.5 pt-1">
+              <ButtonLink href="/find-my-sign" className="shadow-[0_0_28px_rgba(196,160,68,0.35)] hover:shadow-[0_0_38px_rgba(212,175,55,0.55)] transition-shadow">
                 Find my sign <ArrowRight className="size-4" />
               </ButtonLink>
-              <ButtonLink href="/zodiac" variant="ghost">
+              <ButtonLink href="/zodiac" variant="ghost" className="border border-[var(--glass-border)] bg-surface/40 hover:bg-surface/70 hover:border-gold/50 text-ivory">
                 Explore the zodiac
               </ButtonLink>
             </div>
@@ -221,9 +225,9 @@ async function Signatures() {
     <section className="mx-auto max-w-[1360px] px-4 py-24 sm:px-6">
       <Reveal className="mb-12 flex flex-col items-center gap-4 text-center">
         <Parallax speed={-0.12} className="flex flex-col items-center gap-4">
-          <p className="eyebrow">The Signatures</p>
-          <h2 className="font-display text-4xl sm:text-5xl">Twelve signs. Twelve stories.</h2>
-          <p className="text-muted max-w-xl">
+          <p className="eyebrow text-gold-light/90">The Signatures</p>
+          <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">Twelve signs. Twelve stories.</h2>
+          <p className="text-ivory/80 max-w-xl text-base sm:text-lg font-light leading-relaxed">
             Every bottle is rendered in the colours of its sign. Choose by your rashi, or simply by the notes you love.
           </p>
         </Parallax>
@@ -244,8 +248,8 @@ function Elements() {
   return (
     <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
       <Reveal className="mb-10 flex flex-col gap-3">
-        <p className="eyebrow">Shop by element</p>
-        <h2 className="font-display text-3xl sm:text-4xl">Fire, Earth, Air, Water</h2>
+        <p className="eyebrow text-gold-light/90">Shop by element</p>
+        <h2 className="font-display text-3xl sm:text-4xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">Fire, Earth, Air, Water</h2>
       </Reveal>
       <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {ELEMENTS.map((el, i) => {
@@ -266,8 +270,8 @@ function Elements() {
                 <span className="flex gap-1 text-lg sm:gap-2 sm:text-2xl" style={{ color: "var(--z-primary)" }} aria-hidden>
                   {info.signs.map((s) => `${ZODIAC[s].glyph}︎`).join(" ")}
                 </span>
-                <h3 className="font-display text-xl sm:text-3xl">{info.label}</h3>
-                <p className="line-clamp-2 text-xs text-muted sm:text-sm">{info.scent}</p>
+                <h3 className="font-display text-xl sm:text-3xl text-ivory">{info.label}</h3>
+                <p className="line-clamp-2 text-xs text-ivory/70 sm:text-sm font-light">{info.scent}</p>
                 <span className="text-accent mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] sm:mt-2 sm:text-xs">
                   Shop {info.label.toLowerCase()} <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
                 </span>
@@ -291,9 +295,9 @@ async function Coffret() {
           <div aria-hidden className="aurora opacity-60" />
         </Parallax>
         <div className="flex flex-col gap-4">
-          <p className="eyebrow">Not sure yet?</p>
-          <h2 className="font-display text-4xl sm:text-5xl">{p.name}</h2>
-          <p className="text-muted max-w-xl">{p.tagline}.</p>
+          <p className="eyebrow text-gold-light/90">Not sure yet?</p>
+          <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">{p.name}</h2>
+          <p className="text-ivory/80 max-w-xl text-base sm:text-lg font-light">{p.tagline}.</p>
         </div>
         <div className="flex flex-col items-start gap-3 md:items-end">
           {v && <span className="font-display text-3xl">{formatPrice(v.priceP)}</span>}
@@ -322,9 +326,9 @@ function Craft() {
         </Parallax>
       </Reveal>
       <Reveal className="flex flex-col gap-5" delay={0.1}>
-        <p className="eyebrow">Our craft</p>
-        <h2 className="font-display text-4xl sm:text-5xl">The drop that holds a sky</h2>
-        <p className="text-muted leading-relaxed">
+        <p className="eyebrow text-gold-light/90">Our craft</p>
+        <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">The drop that holds a sky</h2>
+        <p className="text-ivory/80 leading-relaxed font-light text-base sm:text-lg">
           Our monogram joins the letters alif and qaf into a single drop of perfume, shaped like a flame. {site.name} means high esteem: we
           compose every signature as an Extrait de Parfum, with a concentration made to stay with you from morning to the last star.
         </p>

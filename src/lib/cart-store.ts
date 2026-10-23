@@ -58,14 +58,35 @@ function subscribe(cb: () => void) {
   };
 }
 
+const drawerListeners = new Set<() => void>();
+let isDrawerOpen = false;
+
+function notifyDrawer(open: boolean) {
+  if (isDrawerOpen === open) return;
+  isDrawerOpen = open;
+  drawerListeners.forEach((l) => l());
+}
+
 export const cart = {
-  add(line: Omit<CartLine, "qty">, qty = 1, maxQty = MAX_QTY) {
+  openDrawer() {
+    notifyDrawer(true);
+  },
+  closeDrawer() {
+    notifyDrawer(false);
+  },
+  toggleDrawer() {
+    notifyDrawer(!isDrawerOpen);
+  },
+  add(line: Omit<CartLine, "qty">, qty = 1, maxQty = MAX_QTY, autoOpen = true) {
     const lines = read();
     const existing = lines.find((l) => l.sku === line.sku);
     const next = existing
       ? lines.map((l) => (l.sku === line.sku ? { ...l, qty: Math.min(l.qty + qty, maxQty) } : l))
       : [...lines, { ...line, qty: Math.min(qty, maxQty) }];
     write(next);
+    if (autoOpen) {
+      notifyDrawer(true);
+    }
   },
   setQty(sku: string, qty: number) {
     write(qty <= 0 ? read().filter((l) => l.sku !== sku) : read().map((l) => (l.sku === sku ? { ...l, qty: Math.min(qty, MAX_QTY) } : l)));
@@ -81,4 +102,18 @@ export function useCart(): CartLine[] {
 
 export function useCartCount(): number {
   return useCart().reduce((n, l) => n + l.qty, 0);
+}
+
+export function useCartDrawer(): [boolean, (open: boolean) => void] {
+  const open = useSyncExternalStore(
+    (cb) => {
+      drawerListeners.add(cb);
+      return () => {
+        drawerListeners.delete(cb);
+      };
+    },
+    () => isDrawerOpen,
+    () => false
+  );
+  return [open, notifyDrawer];
 }

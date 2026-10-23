@@ -121,7 +121,7 @@ export interface ProductDTO {
 export type ProductCardDTO = Pick<
   ProductDTO,
   "id" | "slug" | "type" | "name" | "tagline" | "zodiacSign" | "element" | "noteFamilies" | "media" | "ratingAvg" | "ratingCount" | "categoryId" | "tags" | "badges" | "salesCount" | "createdAt" | "sortOrder"
-> & { fromPriceP: Paise; fromMrpP: Paise; inStock: boolean; optionCount: number };
+> & { fromPriceP: Paise; fromMrpP: Paise; inStock: boolean; optionCount: number; defaultSku?: string };
 
 export function toCard(p: ProductDTO): ProductCardDTO {
   const active = p.variants.filter((v) => v.isActive);
@@ -148,6 +148,7 @@ export function toCard(p: ProductDTO): ProductCardDTO {
     fromPriceP: cheapest?.priceP ?? 0,
     fromMrpP: cheapest?.mrpP ?? 0,
     inStock: active.some((v) => v.stock > 0),
+    defaultSku: cheapest?.sku,
   };
 }
 
