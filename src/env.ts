@@ -27,8 +27,14 @@ const schema = z.object({
 
   BETTER_AUTH_SECRET: z.string().min(32, "Use at least 32 random characters (openssl rand -base64 32)"),
   BETTER_AUTH_URL: z.url(),
-  GOOGLE_CLIENT_ID: str,
-  GOOGLE_CLIENT_SECRET: str,
+  GOOGLE_CLIENT_ID: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-google-client-id")),
+  GOOGLE_CLIENT_SECRET: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-google-client-secret")),
 
   ENCRYPTION_KEY: str,
 
@@ -63,8 +69,14 @@ const schema = z.object({
 
   CRON_SECRET: str,
 
-  SENTRY_DSN: str,
-  NEXT_PUBLIC_SENTRY_DSN: str,
+  SENTRY_DSN: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-sentry-dsn")),
+  NEXT_PUBLIC_SENTRY_DSN: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-sentry-dsn")),
 });
 
 export type Env = z.infer<typeof schema>;
