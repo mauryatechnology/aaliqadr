@@ -36,14 +36,19 @@ export class RateLimitError extends Error {
 export async function rateLimit(name: LimitName, key: string): Promise<void> {
   const { max, windowS } = LIMITS[name];
   if (upstash) {
-    let rl = limiters.get(name);
-    if (!rl) {
-      rl = new Ratelimit({ redis: upstash, limiter: Ratelimit.slidingWindow(max, `${windowS} s`), prefix: `aq:rl:${name}` });
-      limiters.set(name, rl);
+    try {
+      let rl = limiters.get(name);
+      if (!rl) {
+        rl = new Ratelimit({ redis: upstash, limiter: Ratelimit.slidingWindow(max, `${windowS} s`), prefix: `aq:rl:${name}` });
+        limiters.set(name, rl);
+      }
+      const { success } = await rl.limit(key);
+      if (!success) throw new RateLimitError();
+      return;
+    } catch (err) {
+      if (err instanceof RateLimitError) throw err;
+      console.warn(`Upstash rate limiting unavailable (${(err as Error).message}), falling back to in-memory.`);
     }
-    const { success } = await rl.limit(key);
-    if (!success) throw new RateLimitError();
-    return;
   }
   const now = Date.now();
   const k = `${name}:${key}`;

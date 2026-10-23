@@ -51,8 +51,14 @@ const schema = z.object({
   BLOB_READ_WRITE_TOKEN: str,
   BLOB_PRIVATE_READ_WRITE_TOKEN: str,
 
-  UPSTASH_REDIS_REST_URL: z.url(),
-  UPSTASH_REDIS_REST_TOKEN: str,
+  UPSTASH_REDIS_REST_URL: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 && !v.includes("dummy") && !v.includes("clean-redis") ? v.trim() : "dummy-upstash-url")),
+  UPSTASH_REDIS_REST_TOKEN: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 && !v.includes("dummy") && !v.includes("clean-redis") ? v.trim() : "dummy-upstash-token")),
 
   SMTP_HOST: str,
   SMTP_PORT: z.coerce.number().int().positive(),
@@ -107,6 +113,9 @@ const OPTIONAL_IN_PRODUCTION: EnvKey[] = [
   "MSG91_SENDER_ID",
   // Invoices are rendered on demand, so the private store is only needed for uploads.
   "BLOB_PRIVATE_READ_WRITE_TOKEN",
+  // Rate limiting falls back to in-memory window when Upstash is not provisioned.
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
 ];
 
 if (env.VERCEL_ENV === "production") {
