@@ -2,15 +2,30 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { ELEMENT_INFO, ELEMENTS } from "@/config/zodiac";
 import { site } from "@/config/site";
+import { breadcrumbLd, JsonLd, organizationLd } from "@/lib/jsonld";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
 import { Depth, PointerDepth } from "@/components/motion/PointerDepth";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 
 export const metadata: Metadata = {
-  title: "Our Craft: The House of Aaliqadr",
-  description: "How Aaliqadr composes twelve Extrait de Parfum signatures, one for every sign of the zodiac.",
+  title: "Our Craft & Philosophy: Luxury Zodiac Perfumery | Aaliqadr",
+  description:
+    "Discover the house of Aaliqadr. How we combine classical Indian astrology, celestial elements, and modern French perfumery to craft 28% Extrait de Parfum signatures.",
+  keywords: [
+    "about aaliqadr",
+    "luxury perfume brand India",
+    "zodiac perfume maker",
+    "artisanal extrait de parfum",
+    "niche fragrance house India",
+  ],
   alternates: { canonical: "/about" },
+  openGraph: {
+    title: "Our Craft & Philosophy: Luxury Zodiac Perfumery | Aaliqadr",
+    description: "High esteem, in a single drop. Discover the philosophy behind Aaliqadr zodiac fragrances.",
+    url: "/about",
+    type: "website",
+  },
 };
 
 export default function AboutPage() {
@@ -67,6 +82,13 @@ export default function AboutPage() {
           <ButtonLink href="/zodiac">Meet the twelve</ButtonLink>
         </div>
       </section>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: "About Our Craft", path: "/about" },
+        ])}
+      />
+      <JsonLd data={organizationLd()} />
     </div>
   );
 }

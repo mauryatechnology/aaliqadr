@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ELEMENT_INFO, ELEMENTS, ZODIAC } from "@/config/zodiac";
 import { formatSignDates } from "@/lib/zodiac-math";
+import { breadcrumbLd, collectionPageLd, JsonLd } from "@/lib/jsonld";
 import { Reveal } from "@/components/motion/Reveal";
 import { Glyph } from "@/components/zodiac/Glyph";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -10,9 +11,27 @@ import { Parallax } from "@/components/motion/Parallax";
 import { routes } from "@/lib/routes";
 
 export const metadata: Metadata = {
-  title: "The Zodiac: Twelve Signs, Twelve Signature Perfumes",
-  description: "Explore all twelve rashi and the Aaliqadr fragrance composed for each: fire, earth, air and water signs.",
+  title: "The Zodiac Fragrance Guide: 12 Rashis & Extrait de Parfum Signatures | Aaliqadr",
+  description:
+    "Explore all twelve signs of the zodiac and Vedic rashis paired with luxury Extrait de Parfum fragrances. Composed around Fire, Earth, Air, and Water elements with 28% oil concentration.",
+  keywords: [
+    "zodiac perfume guide",
+    "12 rashi perfumes",
+    "astrology fragrance guide",
+    "fire element perfume",
+    "earth element perfume",
+    "air element perfume",
+    "water element perfume",
+    "perfume by rashi",
+    "luxury astrological perfumes",
+  ],
   alternates: { canonical: "/zodiac" },
+  openGraph: {
+    title: "The Zodiac Fragrance Guide: 12 Rashis & Extrait de Parfum Signatures",
+    description: "Twelve signs, twelve signatures. Explore luxury Extrait de Parfum crafted for every rashi.",
+    url: "/zodiac",
+    type: "website",
+  },
 };
 
 export default function ZodiacIndexPage() {
@@ -82,6 +101,23 @@ export default function ZodiacIndexPage() {
           );
         })}
       </div>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: "The Zodiac", path: "/zodiac" },
+        ])}
+      />
+      <JsonLd
+        data={collectionPageLd({
+          name: "The Zodiac Signatures",
+          description: "Twelve luxury Extrait de Parfum fragrances composed for the twelve signs of the zodiac and Vedic rashis.",
+          path: "/zodiac",
+          items: Object.values(ZODIAC).map((s) => ({
+            name: `${s.name} (${s.rashi}): ${s.fragrance.name}`,
+            path: `/zodiac/${s.slug}`,
+          })),
+        })}
+      />
     </div>
   );
 }

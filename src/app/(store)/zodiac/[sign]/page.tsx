@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { ELEMENT_INFO, ZODIAC, ZODIAC_SLUGS, isZodiacSlug } from "@/config/zodiac";
 import { formatSignDates } from "@/lib/zodiac-math";
-import { breadcrumbLd, JsonLd } from "@/lib/jsonld";
+import { breadcrumbLd, faqLd, JsonLd } from "@/lib/jsonld";
 import { getFragranceForSign, getProductCards } from "@/server/queries/catalog";
 import { ZodiacScope } from "@/components/zodiac/ZodiacScope";
 import { AmbientLayer } from "@/components/zodiac/AmbientLayer";
@@ -31,13 +31,35 @@ export async function generateMetadata({ params }: PageProps<"/zodiac/[sign]">):
   const { sign } = await params;
   if (!isZodiacSlug(sign)) return { title: "Not found", robots: { index: false } };
   const s = ZODIAC[sign];
-  const title = `${s.name} (${s.rashi}) Perfume: ${s.fragrance.name}`;
-  const description = `${s.fragrance.tagline}. A ${s.element} sign fragrance for ${s.name}, ruled by ${s.rulingPlanet}. ${s.traits.join(", ")}.`;
+  const title = `${s.name} (${s.rashi} Rashi) Perfume & Zodiac Scent Guide | Aaliqadr`;
+  const description = `Discover ${s.fragrance.name}, the luxury Extrait de Parfum crafted for ${s.name} (${s.rashi}). Ruled by ${s.rulingPlanet} with the ${s.element} element. Key traits: ${s.traits.join(", ")}. 28% concentration for 12+ hour wear.`;
+  const keywords = [
+    `${s.name.toLowerCase()} perfume`,
+    `${s.rashi.toLowerCase()} rashi perfume`,
+    `fragrance for ${s.name.toLowerCase()}`,
+    `${s.name.toLowerCase()} zodiac scent`,
+    `perfume for ${s.rashi.toLowerCase()}`,
+    `${s.element} sign perfume`,
+    `birthday gift for ${s.name.toLowerCase()}`,
+    `${s.fragrance.name.toLowerCase()}`,
+    "extrait de parfum India",
+  ];
   return {
     title,
     description,
+    keywords,
     alternates: { canonical: `/zodiac/${sign}` },
-    openGraph: { title, description, url: `/zodiac/${sign}` },
+    openGraph: {
+      title,
+      description,
+      url: `/zodiac/${sign}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -158,6 +180,26 @@ export default async function SignPage({ params }: PageProps<"/zodiac/[sign]">) 
           { name: "Home", path: "/" },
           { name: "The Zodiac", path: "/zodiac" },
           { name: s.name, path: `/zodiac/${sign}` },
+        ])}
+      />
+      <JsonLd
+        data={faqLd([
+          {
+            question: `Why is ${s.fragrance.name} the ideal fragrance for ${s.name} (${s.rashi})?`,
+            answer: `${s.name} is a ${s.modality} ${s.element} sign ruled by ${s.rulingPlanet}. ${s.fragrance.name} was composed specifically to echo its personality traits (${s.traits.join(", ")}) through ${s.fragrance.tagline.toLowerCase()}.`,
+          },
+          {
+            question: `What are the olfactive notes of ${s.name}'s signature fragrance?`,
+            answer: `Top notes of ${s.fragrance.notes.top.join(", ")}; heart notes of ${s.fragrance.notes.heart.join(", ")}; and base notes of ${s.fragrance.notes.base.join(", ")}.`,
+          },
+          {
+            question: `Which zodiac signs are most compatible with ${s.name} for perfume pairing?`,
+            answer: `${s.name} pairs exceptionally well with ${s.compatible.map((c) => ZODIAC[c].name).join(", ")}. Layering these fragrances creates a complementary celestial accord.`,
+          },
+          {
+            question: `What is the wear time and concentration of ${s.fragrance.name}?`,
+            answer: `Every Aaliqadr signature is composed as a full-strength Extrait de Parfum with 28% perfume oil concentration, providing 12 to 16 hours of longevity on skin.`,
+          },
         ])}
       />
     </ZodiacScope>

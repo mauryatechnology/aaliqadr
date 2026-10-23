@@ -3,14 +3,31 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { ELEMENT_INFO, ELEMENTS, type Element } from "@/config/zodiac";
 import { cn } from "@/lib/cn";
+import { breadcrumbLd, collectionPageLd, JsonLd } from "@/lib/jsonld";
 import { getProductCards } from "@/server/queries/catalog";
 import { ProductCard } from "@/components/product/ProductCard";
 import { PageHero } from "@/components/layout/PageHero";
 
 export const metadata: Metadata = {
-  title: "Shop All Perfumes",
-  description: "All twelve Aaliqadr zodiac Extraits, the Discovery Coffret and Element Trios.",
+  title: "Shop Luxury Zodiac Perfumes & Extrait de Parfum | Aaliqadr",
+  description:
+    "Explore the complete collection of Aaliqadr luxury perfumes. Twelve zodiac Extrait signatures, Discovery Coffret sample kits, and Element Trios with 28% oil concentration. Free shipping across India.",
+  keywords: [
+    "buy luxury perfume India",
+    "zodiac perfume collection",
+    "extrait de parfum shop",
+    "perfume discovery set",
+    "long lasting fragrances India",
+    "astrology gift perfume",
+    "elemental perfumes",
+  ],
   alternates: { canonical: "/shop" },
+  openGraph: {
+    title: "Shop Luxury Zodiac Perfumes & Extrait de Parfum | Aaliqadr",
+    description: "Browse twelve zodiac Extrait de Parfum signatures, discovery sets, and element trios.",
+    url: "/shop",
+    type: "website",
+  },
 };
 
 const TYPES = [
@@ -66,6 +83,23 @@ async function Results({ searchParams }: { searchParams: PageProps<"/shop">["sea
           </li>
         ))}
       </ul>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: "Shop", path: "/shop" },
+        ])}
+      />
+      <JsonLd
+        data={collectionPageLd({
+          name: "All Fragrances",
+          description: "Twelve zodiac signatures, the Discovery Coffret and Element Trios.",
+          path: "/shop",
+          items: items.map((p) => ({
+            name: p.name,
+            path: `/perfume/${p.slug}`,
+          })),
+        })}
+      />
     </>
   );
 }

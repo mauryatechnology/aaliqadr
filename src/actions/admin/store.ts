@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { rupeesToPaise } from "@/lib/money";
+import { SKU_RE } from "@/lib/sku";
 import { requireRole, ROLES } from "@/server/auth";
 import { db } from "@/server/db/connect";
 import { ObjectId } from "mongodb";
@@ -22,7 +23,7 @@ export async function adjustStockAction(_prev: FormState, fd: FormData): Promise
     const parsed = z
       .object({
         productId: z.string().regex(/^[a-f0-9]{24}$/),
-        sku: z.string().regex(/^AQ-[A-Z]{3}-[A-Z0-9]{1,3}$/),
+        sku: z.string().regex(SKU_RE),
         delta: z.coerce.number().int().min(-10000).max(10000).refine((n) => n !== 0, "Enter a number other than 0"),
         reason: z.string().trim().min(3, "Say why (e.g. New batch B-102, damaged in storage)").max(200),
       })

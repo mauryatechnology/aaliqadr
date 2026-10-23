@@ -5,8 +5,11 @@ import { db } from "@/server/db/connect";
 import { Order, type OrderDoc } from "@/server/models/Order";
 import { Product } from "@/server/models/Product";
 import { AuditLog, AuthUser, Coupon, Payment, StockMovement, type AuditLogDoc, type AuthUserDoc, type CouponDoc, type PaymentDoc, type StockMovementDoc } from "@/server/models/commerce";
-import { fromDoc, type LeanProduct } from "@/server/queries/catalog";
-import type { ProductDTO } from "@/server/catalog/types";
+import { Types } from "mongoose";
+import { Category, Collection, HsnCode, type CategoryDoc, type CollectionDoc, type HsnCodeDoc } from "@/server/models/catalog";
+import { categoryFromDoc, collectionFromDoc, collectionProducts, descendantIds, fromDoc, type LeanProduct } from "@/server/queries/catalog";
+import type { CategoryDTO, ProductDTO } from "@/server/catalog/types";
+import { productToInput } from "./product-form";
 
 /** Admin reads (docs/11). Never cached; always called after the page's own role check. */
 
@@ -102,17 +105,147 @@ export async function getAdminOrder(id: string) {
   return order ? { order, payments, audit } : null;
 }
 
-export async function listProductsAdmin(): Promise<(ProductDTO & { status: string })[]> {
-  await db();
-  const docs = await Product.find().sort({ sortOrder: 1, createdAt: 1 }).lean<(LeanProduct & { status: string })[]>();
-  return docs.map((d) => ({ ...fromDoc(d), status: d.status }));
+export const PRODUCT_SORTS = {
+  manual: { label: "Store order", sort: { sortOrder: 1, name: 1 } },
+  name: { label: "Name A–Z", sort: { name: 1 } },
+  newest: { label: "Newest", sort: { createdAt: -1 } },
+  updated: { label: "Recently edited", sort: { updatedAt: -1 } },
+  bestselling: { label: "Best-selling", sort: { salesCount: -1 } },
+} as const;
+export type ProductSort = keyof typeof PRODUCT_SORTS;
+
+export interface ProductFilters {
+  q: string;
+  status?: "active" | "draft" | "archived";
+  categoryId?: string;
+  collectionId?: string;
+  stock?: "out" | "low";
+  sort: ProductSort;
+  page: number;
 }
 
-export async function getProductAdmin(id: string): Promise<(ProductDTO & { status: string; seoTitle?: string; seoDescription?: string }) | null> {
+export type AdminProductRow = ProductDTO & { status: string; category?: string };
+
+export async function listProductsAdmin(f: ProductFilters) {
+  await db();
+  const filter: Record<string, unknown> = {};
+  if (f.status) filter.status = f.status;
+  const term = f.q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").slice(0, 60);
+  if (term) filter.$or = [{ name: { $regex: term, $options: "i" } }, { slug: { $regex: term, $options: "i" } }, { "variants.sku": { $regex: term, $options: "i" } }, { tags: term.toLowerCase() }];
+  const [categories, collection] = await Promise.all([
+    Category.find().select("name parentId").lean<CategoryDoc[]>(),
+    f.collectionId && /^[a-f0-9]{24}$/.test(f.collectionId) ? Collection.findById(f.collectionId).lean<CollectionDoc>() : null,
+  ]);
+  if (f.categoryId && /^[a-f0-9]{24}$/.test(f.categoryId)) {
+    const ids = descendantIds(categories.map(categoryFromDoc), f.categoryId);
+    filter.categoryId = { $in: [...ids].map((id) => new Types.ObjectId(id)) };
+  }
+  if (f.stock === "out") filter.variants = { $not: { $elemMatch: { isActive: true, stock: { $gt: 0 } } } };
+  if (f.stock === "low") {
+    filter.$expr ={ $gt: [{ $size: { $filter: { input: "$variants", as: "v", cond: { $and: ["$$v.isActive", { $lte: ["$$v.stock", "$$v.lowStockThreshold"] }] } } } }, 0] };
+  }
+
+  let docs = await Product.find(filter).sort(PRODUCT_SORTS[f.sort].sort).lean<(LeanProduct & { status: string })[]>();
+  if (collection) {
+    const all = docs.map(fromDoc);
+    const ids = new Set(collectionProducts(collectionFromDoc(collection), all, categories.map(categoryFromDoc)).map((p) => p.id));
+    docs = docs.filter((d) => ids.has(String(d._id)));
+  }
+  const catName = new Map(categories.map((c) => [String(c._id), c.name]));
+  const total = docs.length;
+  const rows: AdminProductRow[] = docs
+    .slice((f.page - 1) * PAGE_SIZE, f.page * PAGE_SIZE)
+    .map((d) => ({ ...fromDoc(d), status: d.status, category: d.categoryId ? catName.get(String(d.categoryId)) : undefined }));
+  const counts = await Product.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$status", n: { $sum: 1 } } }]);
+  return { rows, total, statusCounts: Object.fromEntries(counts.map((c) => [c._id, c.n])) as Record<string, number> };
+}
+
+/** Everything the product editor needs besides the product. */
+export async function getEditorLookups() {
+  await db();
+  const [categories, collections, hsn] = await Promise.all([
+    Category.find().sort({ sortOrder: 1, name: 1 }).lean<CategoryDoc[]>(),
+    Collection.find({ kind: "manual" }).sort({ sortOrder: 1, name: 1 }).select("name slug isActive").lean<CollectionDoc[]>(),
+    HsnCode.find({ isActive: true }).sort({ code: 1 }).lean<HsnCodeDoc[]>(),
+  ]);
+  return {
+    categories: categoryOptions(categories.map(categoryFromDoc)),
+    collections: collections.map((c) => ({ id: String(c._id), name: c.name, isActive: c.isActive })),
+    hsn: hsn.map((h) => ({ code: h.code, description: h.description, gstRatePercent: h.gstRateBps / 100 })),
+  };
+}
+
+/** Categories as an indented, ordered option list ("Perfumes", "— Zodiac Extraits"). */
+export function categoryOptions(all: CategoryDTO[]): { id: string; label: string; depth: number; name: string; parentId?: string; isActive: boolean }[] {
+  const out: { id: string; label: string; depth: number; name: string; parentId?: string; isActive: boolean }[] = [];
+  const walk = (parent: string | undefined, depth: number) => {
+    for (const c of all.filter((x) => x.parentId === parent).toSorted((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))) {
+      out.push({ id: c.id, label: `${"— ".repeat(depth)}${c.name}`, depth, name: c.name, parentId: c.parentId, isActive: c.isActive });
+      if (depth < 5) walk(c.id, depth + 1);
+    }
+  };
+  walk(undefined, 0);
+  return out;
+}
+
+export async function getProductEditor(id: string) {
   if (!/^[a-f0-9]{24}$/.test(id)) return null;
   await db();
   const d = await Product.findById(id).lean<LeanProduct & { status: string }>();
-  return d ? { ...fromDoc(d), status: d.status, seoTitle: d.seo?.title ?? undefined, seoDescription: d.seo?.description ?? undefined } : null;
+  if (!d) return null;
+  const collectionIds = (await Collection.find({ kind: "manual", productIds: new Types.ObjectId(String(d._id)) }).select("_id").lean()).map((c) => String(c._id));
+  const ordered = await Order.distinct("items.sku", { "items.sku": { $in: d.variants.map((v) => v.sku) } });
+  return { value: productToInput(d, collectionIds), orderedSkus: ordered as string[] };
+}
+
+export async function listCategoriesAdmin() {
+  await db();
+  const [cats, counts] = await Promise.all([
+    Category.find().lean<CategoryDoc[]>(),
+    Product.aggregate<{ _id: unknown; n: number }>([{ $group: { _id: "$categoryId", n: { $sum: 1 } } }]),
+  ]);
+  const n = new Map(counts.map((c) => [String(c._id), c.n]));
+  const all = cats.map(categoryFromDoc);
+  return categoryOptions(all).map((o) => ({ ...all.find((c) => c.id === o.id)!, depth: o.depth, products: n.get(o.id) ?? 0 }));
+}
+
+export async function listCollectionsAdmin() {
+  await db();
+  const [cols, docs, cats] = await Promise.all([
+    Collection.find().sort({ sortOrder: 1, name: 1 }).lean<CollectionDoc[]>(),
+    Product.find({ status: "active" }).lean<LeanProduct[]>(),
+    Category.find().lean<CategoryDoc[]>(),
+  ]);
+  const products = docs.map(fromDoc);
+  const categories = cats.map(categoryFromDoc);
+  return cols.map((c) => {
+    const dto = collectionFromDoc(c);
+    return { ...dto, liveProducts: collectionProducts(dto, products, categories).length };
+  });
+}
+
+export async function getCollectionAdmin(id: string) {
+  if (!/^[a-f0-9]{24}$/.test(id)) return null;
+  await db();
+  const c = await Collection.findById(id).lean<CollectionDoc>();
+  return c ? collectionFromDoc(c) : null;
+}
+
+/** Light product list for pickers (any status). */
+export async function listProductPicker() {
+  await db();
+  const docs = await Product.find().sort({ sortOrder: 1, name: 1 }).select("name slug status zodiacSign media variants.sku").lean();
+  return docs.map((d) => ({ id: String(d._id), name: d.name, slug: d.slug, status: d.status as string, image: d.media?.find((m) => m.kind !== "video")?.url, sign: d.zodiacSign ?? undefined }));
+}
+
+export async function listHsnAdmin() {
+  await db();
+  const [codes, usage] = await Promise.all([
+    HsnCode.find().sort({ code: 1 }).lean<HsnCodeDoc[]>(),
+    Product.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$hsnCode", n: { $sum: 1 } } }]),
+  ]);
+  const n = new Map(usage.map((u) => [u._id, u.n]));
+  return codes.map((h) => ({ id: String(h._id), code: h.code, description: h.description, gstRatePercent: h.gstRateBps / 100, isActive: h.isActive, products: n.get(h.code) ?? 0 }));
 }
 
 export async function listInventory() {

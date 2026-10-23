@@ -1,14 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronDown, ShieldCheck, Truck } from "lucide-react";
+import { ChevronDown, RotateCcw, ShieldCheck, Star, Truck } from "lucide-react";
 import { ELEMENT_INFO, SIGNS, ZODIAC, type ZodiacSlug } from "@/config/zodiac";
 import { site } from "@/config/site";
 import { formatPrice } from "@/lib/money";
-import { breadcrumbLd, JsonLd, productLd } from "@/lib/jsonld";
+import { breadcrumbLd, faqLd, JsonLd, productLd } from "@/lib/jsonld";
 import type { ProductDTO } from "@/server/catalog/types";
-import { getProductBySlug, getProductCards, getProductSlugs } from "@/server/queries/catalog";
+import { BADGES } from "@/server/catalog/types";
+import { getCategories, getProductBySlug, getProductCards, getProductSlugs } from "@/server/queries/catalog";
 import { ZodiacScope } from "@/components/zodiac/ZodiacScope";
 import { AmbientLayer } from "@/components/zodiac/AmbientLayer";
 import { BottleArt } from "@/components/zodiac/BottleArt";
@@ -16,6 +16,10 @@ import { Glyph } from "@/components/zodiac/Glyph";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
 import { ScentProfile } from "@/components/product/ScentProfile";
 import { VariantPicker } from "@/components/product/VariantPicker";
+import { ProductStateProvider } from "@/components/product/ProductState";
+import { ProductGallery } from "@/components/product/ProductGallery";
+import { APlusBlocks } from "@/components/product/APlusBlocks";
+import { RecentlyViewed } from "@/components/product/RecentlyViewed";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
@@ -43,7 +47,13 @@ export async function generateMetadata({ params }: PageProps<"/perfume/[slug]">)
   const p = await getProductBySlug(slug);
   if (!p) return { title: "Not found", robots: { index: false } };
   const sign = p.zodiacSign ? ZODIAC[p.zodiacSign] : undefined;
-  const title = p.seo.title ?? (sign ? `${p.name}: ${sign.name} (${sign.rashi}) Perfume, Extrait de Parfum` : p.name);
+  const title =
+    p.seo.title ??
+    (sign
+      ? `${p.name}: ${sign.name} (${sign.rashi}) Perfume | Extrait de Parfum`
+      : p.type === "bundle"
+        ? `${p.name}: 12 Zodiac Perfumes Discovery Set | Aaliqadr`
+        : `${p.name} | Luxury Fragrance by Aaliqadr`);
   const notes = p.notes
     ? [...p.notes.top, ...p.notes.heart]
         .slice(0, 4)
@@ -51,13 +61,101 @@ export async function generateMetadata({ params }: PageProps<"/perfume/[slug]">)
         .join(", ")
     : "";
   const description =
-    p.seo.description ?? `${p.tagline}.${notes ? ` Notes of ${notes}.` : ""} Free shipping above ${formatPrice(site.freeShippingAboveP)}.`;
+    p.seo.description ??
+    `${p.tagline}.${notes ? ` Notes of ${notes}.` : ""} 28% Extrait de Parfum concentration for 12+ hour wear. Free shipping above ${formatPrice(site.freeShippingAboveP)}.`;
+
+  const keywords = sign
+    ? [
+        `${sign.name.toLowerCase()} perfume`,
+        `${sign.rashi.toLowerCase()} rashi perfume`,
+        `${sign.name.toLowerCase()} fragrance`,
+        p.name.toLowerCase(),
+        "extrait de parfum",
+        `${sign.element} sign perfume`,
+        "long lasting perfume India",
+        `gift for ${sign.name.toLowerCase()}`,
+        "zodiac fragrance India",
+      ]
+    : [
+        p.name.toLowerCase(),
+        "perfume discovery set",
+        "fragrance sample kit",
+        "luxury perfume gift set",
+        "extrait de parfum collection",
+      ];
+
   return {
     title,
     description,
+    keywords,
     alternates: { canonical: `/perfume/${p.slug}` },
-    openGraph: { title, description, url: `/perfume/${p.slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/perfume/${p.slug}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
+}
+
+function buildProductFaqs(p: ProductDTO, sign?: (typeof ZODIAC)[keyof typeof ZODIAC]) {
+  const notesStr = p.notes
+    ? `Top notes of ${p.notes.top.map((n) => n.name).join(", ")}; heart notes of ${p.notes.heart.map((n) => n.name).join(", ")}; base notes of ${p.notes.base.map((n) => n.name).join(", ")}.`
+    : "";
+
+  if (sign) {
+    return [
+      {
+        question: `What makes ${p.name} the signature fragrance for ${sign.name} (${sign.rashi})?`,
+        answer: `${p.name} is formulated specifically for ${sign.name} (${sign.rashi}), reflecting its ${sign.element} element and ${sign.rulingPlanet} ruler. It captures the ${sign.fragrance.mood.toLowerCase()} essence with ${p.tagline.toLowerCase()}.`,
+      },
+      {
+        question: `What is the concentration and longevity of ${p.name}?`,
+        answer: `${p.name} is formulated as a luxury Extrait de Parfum with 28% oil concentration. It delivers 12 to 16 hours of continuous performance on skin, with prominent sillage and all-day projection.`,
+      },
+      ...(notesStr
+        ? [
+            {
+              question: `What are the olfactive notes in ${p.name}?`,
+              answer: `${notesStr} ${p.profile ? `Best worn during ${p.profile.season.join(" & ").toLowerCase()}, in the ${p.profile.timeOfDay.join(" or ")}.` : ""}`,
+            },
+          ]
+        : []),
+      {
+        question: `How should I apply ${p.name} Extrait de Parfum for maximum projection?`,
+        answer:
+          "Apply 2–3 sprays to pulse points (inside wrists, behind ears, collarbones). Avoid rubbing wrists together, as this breaks down delicate top notes. Spraying on natural fabrics (cotton, linen, wool) extends longevity past 24 hours.",
+      },
+      {
+        question: "Is shipping free across India and what is the return policy?",
+        answer: `We offer complimentary delivery on all orders above ${formatPrice(site.freeShippingAboveP)}. Each bottle arrives in tamper-evident, sealed luxury packaging. If damaged in transit, report within 48 hours with an unboxing video for an immediate replacement.`,
+      },
+    ];
+  }
+
+  return [
+    {
+      question: `What is included in the ${p.name}?`,
+      answer: p.description,
+    },
+    {
+      question: `What is the concentration and longevity of the fragrances in ${p.name}?`,
+      answer: "All included fragrances are full-strength Extrait de Parfum (28% concentration), offering 12+ hours of performance and genuine projection.",
+    },
+    {
+      question: "Is this suitable as a gift?",
+      answer: "Yes, it arrives in embossed gold foil gift packaging with dedicated fragrance blotting strips and personalized gift notes upon request.",
+    },
+    {
+      question: "Is shipping free across India?",
+      answer: `Orders above ${formatPrice(site.freeShippingAboveP)} receive complimentary express shipping across India.`,
+    },
+  ];
 }
 
 export async function generateViewport({ params }: PageProps<"/perfume/[slug]">): Promise<Viewport> {
@@ -73,11 +171,20 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
   if (!p) notFound();
   const themeSign = themeSignFor(p);
   const sign = p.zodiacSign ? ZODIAC[p.zodiacSign] : undefined;
-  const cards = await getProductCards();
-  const related = (p.compatibleSigns ?? [])
-    .map((c) => cards.find((x) => x.zodiacSign === c))
-    .filter((x) => x !== undefined)
+  const [cards, categories] = await Promise.all([getProductCards(), getCategories()]);
+  // Related: compatible signs first (fragrances), then the same category.
+  const related = [
+    ...(p.compatibleSigns ?? []).map((c) => cards.find((x) => x.zodiacSign === c && x.type === "fragrance")),
+    ...cards.filter((x) => x.categoryId && x.categoryId === p.categoryId),
+  ]
+    .filter((x): x is (typeof cards)[number] => !!x && x.slug !== p.slug)
+    .filter((x, i, all) => all.findIndex((y) => y.id === x.id) === i)
     .slice(0, 4);
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const trail = [];
+  for (let c = p.categoryId ? byId.get(p.categoryId) : undefined; c && trail.length < 4; c = c.parentId ? byId.get(c.parentId) : undefined) trail.unshift(c);
+  const active = p.variants.filter((v) => v.isActive);
+  const cover = p.media.find((m) => m.kind === "image");
 
   const body = (
     <>
@@ -87,49 +194,39 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
             {themeSign ? <AmbientLayer sign={themeSign} intensity={0.6} /> : <div aria-hidden className="aurora" />}
           </Depth>
         </Parallax>
+        <ProductStateProvider variants={p.variants}>
         <div className="mx-auto grid max-w-[1360px] grid-cols-1 gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:gap-16 lg:py-16">
           {/* Gallery */}
           <div className="lg:sticky lg:top-24 lg:self-start">
-            <div
-              className="surface relative grid aspect-[4/5] place-items-center overflow-clip"
-              style={{
-                viewTransitionName: `product-${p.slug}`,
-                background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)",
-              }}
-            >
-              {p.media[0] ? (
-                <Image
-                  src={p.media[0].url}
-                  alt={p.media[0].alt}
-                  fill
-                  quality={85}
-                  sizes="(min-width: 1024px) 50vw, 100vw"
-                  className="object-cover"
-                  preload
-                />
-              ) : (
+            <ProductGallery
+              media={p.media}
+              name={p.name}
+              viewTransitionName={`product-${p.slug}`}
+              fallback={
                 <Parallax speed={0.18} className="w-1/2 max-w-xs">
                   <Depth strength={22}>
                     <BottleArt sign={sign?.slug} preload className="animate-float drop-shadow-[0_30px_70px_rgba(0,0,0,.6)]" />
                   </Depth>
                 </Parallax>
-              )}
-            </div>
+              }
+            />
           </div>
 
           {/* Buy box */}
           <div className="flex flex-col gap-7">
-            <nav aria-label="Breadcrumb" className="text-muted text-xs">
-              <Link href="/shop" className="hover:text-fg">
-                Shop
-              </Link>
+            <nav aria-label="Breadcrumb" className="text-muted flex flex-wrap gap-x-1 text-xs">
+              <Link href="/shop" className="hover:text-fg">Shop</Link>
+              {trail.map((c) => (
+                <span key={c.id}>
+                  <span aria-hidden>/ </span>
+                  <Link href={routes.category(c.slug)} className="hover:text-fg">{c.name}</Link>
+                </span>
+              ))}
               {sign && (
-                <>
-                  {" / "}
-                  <Link href={routes.sign(sign.slug)} className="hover:text-fg">
-                    {sign.name}
-                  </Link>
-                </>
+                <span>
+                  <span aria-hidden>/ </span>
+                  <Link href={routes.sign(sign.slug)} className="hover:text-fg">{sign.name}</Link>
+                </span>
               )}
             </nav>
             <div className="flex flex-col gap-3">
@@ -142,14 +239,29 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
                 ) : p.type === "bundle" ? (
                   "Discovery · All twelve signs"
                 ) : (
-                  "Gift set"
+                  (trail.at(-1)?.name ?? p.legal.genericName)
                 )}
               </p>
               <h1 className="font-display text-5xl leading-none sm:text-6xl">{p.name}</h1>
-              <p className="text-muted text-lg">{p.tagline}.</p>
+              {p.tagline && <p className="text-muted text-lg">{p.tagline}.</p>}
+              {(p.ratingCount > 0 || p.badges.length > 0) && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {p.ratingCount > 0 && (
+                    <a href="#reviews" className="flex items-center gap-1.5 text-sm hover:text-accent">
+                      <span className="flex" aria-hidden>
+                        {[1, 2, 3, 4, 5].map((n) => <Star key={n} className="size-4" style={{ color: "var(--z-primary)" }} fill={n <= Math.round(p.ratingAvg) ? "currentColor" : "none"} />)}
+                      </span>
+                      <span>{p.ratingAvg.toFixed(1)} · {p.ratingCount} review{p.ratingCount === 1 ? "" : "s"}</span>
+                    </a>
+                  )}
+                  {p.badges.map((b) => (
+                    <span key={b} className="rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]" style={{ borderColor: "var(--glass-border)" }}>{BADGES[b]}</span>
+                  ))}
+                </div>
+              )}
             </div>
 
-            <VariantPicker slug={p.slug} variants={p.variants} />
+            <VariantPicker slug={p.slug} name={p.name} options={p.options} />
 
             <ul className="text-muted grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <li className="flex items-center gap-2">
@@ -158,13 +270,20 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
               <li className="flex items-center gap-2">
                 <ShieldCheck className="text-accent size-4" aria-hidden /> Sealed, authentic, batch-coded
               </li>
+              <li className="flex items-center gap-2">
+                <RotateCcw className="text-accent size-4" aria-hidden /> Damaged in transit? Replaced free
+              </li>
             </ul>
 
             <div className="hairline" />
 
             <div className="flex flex-col divide-y divide-white/10">
-              <Section title="The story" open>
-                <p className="leading-relaxed">{p.description}</p>
+              <Section title={p.type === "fragrance" ? "The story" : "Description"} open>
+                {p.descriptionHtml ? (
+                  <div className="rich-text" dangerouslySetInnerHTML={{ __html: p.descriptionHtml }} />
+                ) : (
+                  <p className="leading-relaxed">{p.description}</p>
+                )}
               </Section>
               {p.includes && p.includes.length > 0 && (
                 <Section title="What's inside" open>
@@ -183,38 +302,60 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
                   <p className="leading-relaxed">{p.howToWear}</p>
                 </Section>
               )}
+              {p.display.specs && p.specs.length > 0 && (
+                <Section title="Specifications">
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+                    {p.specs.map((x) => (
+                      <div key={x.label} className="contents">
+                        <dt>{x.label}</dt>
+                        <dd className="text-fg">{x.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Section>
+              )}
               <Section title="Details & legal">
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
                   <dt>Product</dt>
                   <dd className="text-fg">{p.legal.genericName}</dd>
                   <dt>Net quantity</dt>
                   <dd className="text-fg">
-                    {p.variants
-                      .filter((v) => v.isActive)
-                      .map((v) => v.label)
-                      .join(" / ")}
+                    {active.map((v) => (v.volumeMl ? `${v.volumeMl} ml` : v.label)).join(" / ")}
                   </dd>
                   <dt>MRP</dt>
                   <dd className="text-fg">
-                    {p.variants
-                      .filter((v) => v.isActive)
-                      .map((v) => `${formatPrice(v.mrpP)} (${v.label})`)
-                      .join(", ")}
+                    {active.map((v) => `${formatPrice(v.mrpP)} (${v.label})`).join(", ")}
                     , inclusive of all taxes
                   </dd>
                   <dt>Manufactured by</dt>
                   <dd className="text-fg">{p.legal.manufacturer}</dd>
+                  {p.legal.packer && (
+                    <>
+                      <dt>Packed / marketed by</dt>
+                      <dd className="text-fg">{p.legal.packer}</dd>
+                    </>
+                  )}
                   <dt>Country of origin</dt>
                   <dd className="text-fg">{p.legal.countryOfOrigin}</dd>
                   <dt>Mfg. date & batch</dt>
                   <dd className="text-fg">As printed on the pack</dd>
                 </dl>
-                <p className="mt-4 text-xs">Flammable. Keep away from heat and flame. For external use only. Avoid contact with eyes.</p>
+                {p.type !== "accessory" && <p className="mt-4 text-xs">Flammable. Keep away from heat and flame. For external use only. Avoid contact with eyes.</p>}
+              </Section>
+              <Section title="Shipping & returns">
+                <p className="leading-relaxed">
+                  Dispatched in 1–2 working days and delivered in 3–7. Free shipping above {formatPrice(site.freeShippingAboveP)}. Opened perfume can&apos;t be returned, but if it arrives damaged, leaked or wrong, report it from your order within 48 hours of delivery with an unboxing video and we&apos;ll replace or refund it.
+                </p>
+                <p className="mt-3 flex flex-wrap gap-4 text-xs">
+                  <Link href={routes.policy("shipping")} className="underline underline-offset-4 hover:text-fg">Shipping policy</Link>
+                  <Link href={routes.policy("returns")} className="underline underline-offset-4 hover:text-fg">Returns & refunds</Link>
+                </p>
               </Section>
             </div>
           </div>
         </div>
-      </PointerDepth>
+      </ProductStateProvider>
+    </PointerDepth>
 
       {p.notes && (
         <section className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6">
@@ -234,6 +375,8 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
         </section>
       )}
 
+      {p.aPlus && p.aPlus.length > 0 && <APlusBlocks blocks={p.aPlus} />}
+
       {related.length > 0 && (
         <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
           <Reveal className="mb-10 flex flex-col gap-3">
@@ -250,6 +393,8 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
         </section>
       )}
 
+      <RecentlyViewed current={{ slug: p.slug, name: p.name, priceP: active[0]?.priceP ?? 0, image: cover?.url }} />
+
       <JsonLd data={productLd(p)} />
       <JsonLd
         data={breadcrumbLd([
@@ -258,6 +403,7 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
           { name: p.name, path: `/perfume/${p.slug}` },
         ])}
       />
+      <JsonLd data={faqLd(buildProductFaqs(p, sign))} />
     </>
   );
 

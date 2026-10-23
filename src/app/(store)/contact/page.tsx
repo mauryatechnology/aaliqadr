@@ -2,11 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { site } from "@/config/site";
 import { PageHero } from "@/components/layout/PageHero";
+import { breadcrumbLd, JsonLd, organizationLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
-  title: "Contact Us",
-  description: `Customer care for ${site.name}: orders, deliveries, damaged items and fragrance advice.`,
+  title: "Contact Customer Care & Concierge | Aaliqadr",
+  description: `Get in touch with Aaliqadr for order assistance, bespoke astrology fragrance advice, delivery inquiries, and corporate gifting. Call or WhatsApp ${site.support.phone}.`,
+  keywords: [
+    "aaliqadr contact",
+    "aaliqadr customer care",
+    "perfume consultation India",
+    "zodiac perfume customer support",
+  ],
   alternates: { canonical: "/contact" },
+  openGraph: {
+    title: "Contact Customer Care | Aaliqadr",
+    description: "We're here to help with orders, fragrance advice and consultations.",
+    url: "/contact",
+    type: "website",
+  },
 };
 
 export default function ContactPage() {
@@ -43,6 +56,13 @@ export default function ContactPage() {
           .
         </p>
       </div>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: "Contact Customer Care", path: "/contact" },
+        ])}
+      />
+      <JsonLd data={organizationLd()} />
     </>
   );
 }

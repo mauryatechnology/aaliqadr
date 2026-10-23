@@ -9,9 +9,10 @@ import { NotConfiguredError } from "@/env";
 import { db } from "@/server/db/connect";
 import { Product } from "@/server/models/Product";
 import { Order } from "@/server/models/Order";
+import { Category, Collection, HsnCode } from "@/server/models/catalog";
 import { Address, AuditLog, Counter, Coupon, CouponRedemption, Payment, Settings, StockMovement, WebhookEvent } from "@/server/models/commerce";
 
-const MODELS = [Product, Order, Payment, WebhookEvent, Coupon, CouponRedemption, StockMovement, Address, Settings, Counter, AuditLog];
+const MODELS = [Product, Category, Collection, HsnCode, Order, Payment, WebhookEvent, Coupon, CouponRedemption, StockMovement, Address, Settings, Counter, AuditLog];
 
 async function main() {
   await db();

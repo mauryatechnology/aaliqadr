@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { STATE_CODES } from "@/config/india";
 import { PAYMENT_METHODS } from "@/lib/order-status";
+import { SKU_RE } from "@/lib/sku";
 
 /** Checkout input, shared by the form and the server actions (docs/05 §4). */
 
@@ -14,7 +15,7 @@ export const phoneIN = z
   .pipe(z.string().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"))
   .transform((v) => `+91${v}`);
 
-export const sku = z.string().regex(/^AQ-[A-Z]{3}-[A-Z0-9]{1,3}$/);
+export const sku = z.string().regex(SKU_RE);
 
 const cartLine = z.object({ sku, qty: z.number().int().min(1).max(5) }).strict();
 /** A bag being viewed (may be empty). */

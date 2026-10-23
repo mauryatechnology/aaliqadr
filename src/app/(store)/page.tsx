@@ -1,12 +1,13 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
-import { ArrowRight, Gift, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, ChevronDown, Gift, HelpCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
 import { ELEMENT_INFO, ELEMENTS, ZODIAC } from "@/config/zodiac";
 import { site } from "@/config/site";
 import { currentSeasonSign, formatSignDates } from "@/lib/zodiac-math";
 import { formatPrice } from "@/lib/money";
-import { JsonLd, websiteLd } from "@/lib/jsonld";
+import { faqLd, JsonLd, organizationLd, websiteLd } from "@/lib/jsonld";
 import { getProductBySlug, getProductCards } from "@/server/queries/catalog";
 import { ZodiacWheel } from "@/components/zodiac/ZodiacWheel";
 import { ZodiacScope } from "@/components/zodiac/ZodiacScope";
@@ -19,6 +20,65 @@ import { Depth, PointerDepth } from "@/components/motion/PointerDepth";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { routes } from "@/lib/routes";
 
+export const metadata: Metadata = {
+  title: "Aaliqadr: Luxury Zodiac Perfumes & Extrait de Parfum | Crafted for Your Rashi",
+  description:
+    "Explore twelve luxury Extrait de Parfum signatures crafted for the twelve zodiac signs and Vedic rashis. 28% oil concentration for 12+ hour longevity. Free shipping across India.",
+  keywords: [
+    "zodiac perfume",
+    "rashi perfume",
+    "luxury perfume India",
+    "extrait de parfum",
+    "long lasting perfume",
+    "astrology fragrance",
+    "zodiac birthday gift",
+    "discovery coffret perfume",
+    "scent for your rashi",
+    "niche fragrance India",
+    "perfume for aries leo scorpio",
+  ],
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Aaliqadr: Luxury Zodiac Perfumes & Extrait de Parfum",
+    description:
+      "Twelve bespoke signatures, one for every rashi. Extrait de Parfum with 28% concentration made in India.",
+    url: "/",
+  },
+};
+
+const HOME_FAQS = [
+  {
+    question: "How do I choose the right perfume for my zodiac sign or Vedic rashi?",
+    answer:
+      "Every Aaliqadr fragrance is formulated around the element (Fire, Earth, Air, Water), ruling planet, and temperament of its sign. You can find your fragrance by selecting your Western sun sign or your Vedic Chandra rashi using our Find My Sign calculator, or simply by exploring the notes of your ruling element.",
+  },
+  {
+    question: "What is the difference between Extrait de Parfum and Eau de Parfum (EDP)?",
+    answer:
+      "Extrait de Parfum is the highest concentration of fragrance in fine perfumery, containing 20% to 30% pure perfume oils (Aaliqadr formulations feature 28% concentration). Standard Eau de Parfum (EDP) contains only 12% to 18%. This concentration ensures rich scent evolution and 12+ hours of wear time on skin and textiles.",
+  },
+  {
+    question: "How long does Aaliqadr Extrait de Parfum last on skin and fabric?",
+    answer:
+      "Due to our 28% oil concentration and artisanal maceration in small batches, Aaliqadr Extraits last 12 to 16 hours on skin and up to 24 hours on natural fabric, with strong yet refined projection and lasting sillage.",
+  },
+  {
+    question: "Can I gift a zodiac perfume if I don't know the recipient's fragrance preferences?",
+    answer:
+      "Yes. A zodiac fragrance is one of the most thoughtful, personalized gifts because it is chosen based on birth date and astrological identity rather than random guesswork. Each bottle comes in a presentation box with an astrological profile card and complimentary handwritten gift message.",
+  },
+  {
+    question: "Can I try all twelve zodiac perfumes before committing to a full bottle?",
+    answer:
+      "Yes! Our Zodiac Discovery Coffret features luxury miniature flacons of all twelve signatures. It allows you to explore the full astrological wheel, layer compatible signs, and find your favorite signature from home.",
+  },
+  {
+    question: "Are Aaliqadr perfumes IFRA compliant and skin-safe?",
+    answer:
+      "All Aaliqadr fragrances are formulated with premium botanical extracts and safe aroma molecules in compliance with International Fragrance Association (IFRA) standards. They are cruelty-free, paraben-free, and bottled with genuine batch numbers in India.",
+  },
+];
+
 export default function HomePage() {
   return (
     <>
@@ -28,8 +88,11 @@ export default function HomePage() {
       <Elements />
       <Coffret />
       <Craft />
+      <HomeFaq />
       <Trust />
       <JsonLd data={websiteLd()} />
+      <JsonLd data={organizationLd()} />
+      <JsonLd data={faqLd(HOME_FAQS)} />
     </>
   );
 }
@@ -239,6 +302,33 @@ function Craft() {
           Read our story
         </ButtonLink>
       </Reveal>
+    </section>
+  );
+}
+
+function HomeFaq() {
+  return (
+    <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6">
+      <Reveal className="mb-12 flex flex-col items-center gap-3 text-center">
+        <p className="eyebrow flex items-center gap-1.5">
+          <HelpCircle className="size-3.5 text-gold" /> Frequently asked questions
+        </p>
+        <h2 className="font-display text-4xl sm:text-5xl">Understanding Aaliqadr</h2>
+        <p className="text-muted max-w-xl text-sm sm:text-base">
+          Astrology, fragrance concentrations, and gifting guidance crafted to help you find your celestial signature.
+        </p>
+      </Reveal>
+      <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
+        {HOME_FAQS.map((faq, i) => (
+          <details key={faq.question} className="group py-5 first:pt-0 last:pb-0" open={i === 0}>
+            <summary className="font-display flex cursor-pointer list-none items-center justify-between text-left text-lg text-fg transition-colors hover:text-gold [&::-webkit-details-marker]:hidden">
+              <span className="pr-4">{faq.question}</span>
+              <ChevronDown className="size-4 shrink-0 text-muted transition-transform duration-300 group-open:rotate-180" aria-hidden />
+            </summary>
+            <p className="text-muted mt-3 text-sm leading-relaxed">{faq.answer}</p>
+          </details>
+        ))}
+      </div>
     </section>
   );
 }

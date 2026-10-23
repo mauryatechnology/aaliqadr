@@ -149,6 +149,52 @@
     backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   }
 
+  /* Rich product descriptions (sanitised HTML from the admin editor). */
+  .rich-text {
+    line-height: 1.75;
+  }
+  .rich-text > * + * {
+    margin-top: 0.85em;
+  }
+  .rich-text h3,
+  .rich-text h4 {
+    font-family: var(--font-display);
+    color: var(--z-text);
+    font-size: 1.35em;
+    line-height: 1.2;
+    margin-top: 1.4em;
+  }
+  .rich-text strong {
+    color: var(--z-text);
+    font-weight: 600;
+  }
+  .rich-text a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .rich-text ul,
+  .rich-text ol {
+    padding-left: 1.25em;
+  }
+  .rich-text ul {
+    list-style: disc;
+  }
+  .rich-text ol {
+    list-style: decimal;
+  }
+  .rich-text li + li {
+    margin-top: 0.35em;
+  }
+  .rich-text li::marker {
+    color: var(--color-accent);
+  }
+  .rich-text blockquote {
+    border-left: 2px solid var(--color-accent);
+    padding-left: 1em;
+    font-style: italic;
+  }
+
   /* Gold hairline divider. */
   .hairline {
     height: 1px;

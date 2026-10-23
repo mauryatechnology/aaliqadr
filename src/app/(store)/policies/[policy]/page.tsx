@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { site } from "@/config/site";
 import { formatPrice } from "@/lib/money";
+import { breadcrumbLd, JsonLd } from "@/lib/jsonld";
 import { PageHero } from "@/components/layout/PageHero";
 
 /**
@@ -98,7 +99,18 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps<"/policies/[policy]">): Promise<Metadata> {
   const { policy } = await params;
   const p = POLICIES[policy];
-  return p ? { title: p.title, description: p.summary, alternates: { canonical: `/policies/${policy}` } } : { title: "Not found" };
+  return p
+    ? {
+        title: `${p.title} · Aaliqadr Policies`,
+        description: p.summary,
+        alternates: { canonical: `/policies/${policy}` },
+        openGraph: {
+          title: `${p.title} · Aaliqadr`,
+          description: p.summary,
+          url: `/policies/${policy}`,
+        },
+      }
+    : { title: "Not found" };
 }
 
 export default async function PolicyPage({ params }: PageProps<"/policies/[policy]">) {
@@ -123,6 +135,12 @@ export default async function PolicyPage({ params }: PageProps<"/policies/[polic
           </div>
         </div>
       </div>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Home", path: "/" },
+          { name: p.title, path: `/policies/${policy}` },
+        ])}
+      />
     </article>
   );
 }

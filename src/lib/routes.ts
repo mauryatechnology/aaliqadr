@@ -16,4 +16,9 @@ export const routes = {
   adminOrder: (id: string) => `/admin/orders/${id}` as Route,
   packingSlip: (id: string) => `/packing-slip/${id}` as Route,
   adminProduct: (id: string) => `/admin/products/${id}` as Route,
+  adminCollection: (id: string) => `/admin/collections/${id}` as Route,
+  adminCustomer: (id: string) => `/admin/customers/${id}` as Route,
+  adminReturn: (id: string) => `/admin/returns/${id}` as Route,
+  category: (slug: string) => `/category/${slug}` as Route,
+  collection: (slug: string) => `/collections/${slug}` as Route,
 };

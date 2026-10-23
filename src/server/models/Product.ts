@@ -9,7 +9,9 @@ const VariantSchema = new Schema(
   {
     sku: { type: String, required: true },
     label: { type: String, required: true },
-    volumeMl: { type: Number, required: true, min: 0 },
+    optionValues: { type: [String], default: [] },
+    mediaIds: { type: [String], default: [] },
+    volumeMl: { type: Number, default: 0, min: 0 },
     mrpP: { type: Number, required: true, min: 0 },
     priceP: { type: Number, required: true, min: 0 },
     costP: { type: Number, select: false },
@@ -28,7 +30,9 @@ const VariantSchema = new Schema(
 
 const MediaSchema = new Schema(
   {
+    id: { type: String, required: true },
     url: { type: String, required: true },
+    posterUrl: String,
     pathname: String,
     alt: { type: String, required: true },
     width: { type: Number, required: true },
@@ -36,6 +40,23 @@ const MediaSchema = new Schema(
     blurDataURL: String,
     kind: { type: String, enum: ["image", "video"], default: "image" },
     role: { type: String, enum: ["hero", "bottle", "box", "texture", "lifestyle"] },
+  },
+  { _id: false },
+);
+
+const OptionSchema = new Schema({ name: { type: String, required: true }, values: { type: [String], default: [] } }, { _id: false });
+
+const ImageRefSchema = new Schema({ url: String, alt: String, width: Number, height: Number }, { _id: false });
+
+const APlusSchema = new Schema(
+  {
+    id: { type: String, required: true },
+    type: { type: String, enum: ["text", "image", "image_text", "features"], required: true },
+    title: String,
+    body: String,
+    image: ImageRefSchema,
+    imageSide: { type: String, enum: ["left", "right"] },
+    features: [String],
   },
   { _id: false },
 );
@@ -48,6 +69,14 @@ const ProductSchema = new Schema(
     name: { type: String, required: true, trim: true },
     tagline: { type: String, default: "" },
     description: { type: String, required: true },
+    descriptionHtml: String,
+    categoryId: { type: Schema.Types.ObjectId, ref: "Category" },
+    tags: { type: [String], default: [] },
+    badges: { type: [String], default: [] },
+    options: { type: [OptionSchema], default: [] },
+    specs: { type: [{ _id: false, label: String, value: String }], default: [] },
+    aPlus: { type: [APlusSchema], default: [] },
+    display: { notes: { type: Boolean, default: true }, profile: { type: Boolean, default: true }, specs: { type: Boolean, default: true } },
     story: String,
     zodiacSign: { type: String, enum: ZODIAC_SLUGS },
     element: { type: String, enum: ELEMENTS },
@@ -93,6 +122,8 @@ ProductSchema.index({ status: 1, type: 1, sortOrder: 1 });
 ProductSchema.index({ status: 1, zodiacSign: 1 });
 ProductSchema.index({ status: 1, element: 1 });
 ProductSchema.index({ status: 1, salesCount: -1 });
+ProductSchema.index({ categoryId: 1, status: 1 });
+ProductSchema.index({ tags: 1 });
 
 export type ProductDoc = InferSchemaType<typeof ProductSchema>;
 

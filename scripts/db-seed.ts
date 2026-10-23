@@ -8,13 +8,16 @@ import { NotConfiguredError } from "@/env";
 import { db } from "@/server/db/connect";
 import { Product } from "@/server/models/Product";
 import { SEED_PRODUCTS } from "@/server/catalog/seed";
+import { migrateCatalog } from "@/server/catalog/migrate";
 
 async function main() {
   await db();
   let created = 0;
   let updated = 0;
   for (const p of SEED_PRODUCTS) {
-    const { id: _id, updatedAt: _u, ratingAvg: _ra, ratingCount: _rc, salesCount: _sc, variants, ...fields } = p;
+    // Catalogue structure (category, tags, badges, options) is filled by migrateCatalog below;
+    // admin-authored content (specs, A+ blocks, display) is never overwritten by a re-seed.
+    const { id: _id, updatedAt: _u, createdAt: _c, ratingAvg: _ra, ratingCount: _rc, salesCount: _sc, categoryId: _cat, tags: _t, badges: _b, options: _o, specs: _sp, aPlus: _ap, display: _d, variants, ...fields } = p;
     const existing = await Product.findOne({ slug: p.slug }).lean();
     if (!existing) {
       await Product.create({ ...fields, variants, status: "active", publishedAt: new Date() });
@@ -28,6 +31,7 @@ async function main() {
     }
   }
   console.log(`Seed complete: ${created} created, ${updated} updated.`);
+  await migrateCatalog();
 }
 
 main()
