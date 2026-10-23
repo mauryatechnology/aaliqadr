@@ -50,8 +50,12 @@ export const auth = betterAuth({
         before: async (user) => {
           const email = user.email.toLowerCase();
           const isAdmin = email === env.ADMIN_EMAIL.toLowerCase() || email === "kuldeepmaurya4296@gmail.com";
+          // A pending staff invite (Settings › Staff) decides the role of a new account.
+          const invites = mongoClient.db().collection<{ email: string; role: string; acceptedAt?: Date }>("staffinvites");
+          const invite = isAdmin ? null : await invites.findOne({ email, acceptedAt: { $exists: false } });
+          if (invite) await invites.updateOne({ email }, { $set: { acceptedAt: new Date() } });
           return {
-            data: { ...user, role: isAdmin ? "owner" : "customer" },
+            data: { ...user, role: isAdmin ? "owner" : (invite?.role ?? "customer") },
           };
         },
       },

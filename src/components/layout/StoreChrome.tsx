@@ -6,6 +6,7 @@ import { CelestialBackdrop } from "./CelestialBackdrop";
 import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { ParallaxRuntime } from "@/components/motion/ParallaxRuntime";
 import { JsonLd, organizationLd } from "@/lib/jsonld";
+import { AnnouncementBar } from "@/components/content/AnnouncementBar";
 
 /** Storefront frame: sky, header, footer and motion runtime. Used by (store) and the 404 page. */
 export function StoreChrome({ children }: { children: ReactNode }) {
@@ -15,6 +16,7 @@ export function StoreChrome({ children }: { children: ReactNode }) {
         Skip to content
       </a>
       <CelestialBackdrop />
+      <AnnouncementBar />
       <Header />
       <main id="main" className="flex-1">
         {children}

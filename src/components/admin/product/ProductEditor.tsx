@@ -102,8 +102,8 @@ export function ProductEditor({ initial, isNew, lookups, orderedSkus }: { initia
   for (const row of v.variants) for (const id of row.mediaIds) usage.set(id, [...(usage.get(id) ?? []), row.label]);
 
   return (
-    <div className="grid grid-cols-1 gap-6 pb-28 xl:grid-cols-[180px_minmax(0,1fr)]">
-      <nav aria-label="Sections" className="hidden xl:block">
+    <div className="grid grid-cols-1 gap-6 pb-28 2xl:grid-cols-[170px_minmax(0,1fr)]">
+      <nav aria-label="Sections" className="hidden 2xl:block">
         <ul className="sticky top-6 flex flex-col gap-0.5 text-sm">
           {SECTIONS.filter(([id]) => id !== "fragrance" || showFragrance).map(([id, label]) => (
             <li key={id}>
@@ -239,7 +239,7 @@ export function ProductEditor({ initial, isNew, lookups, orderedSkus }: { initia
 
         <section id="media" className="scroll-mt-6">
           <Card title="Media" actions={<span className="text-xs text-neutral-500">{v.media.length}/20</span>}>
-            <MediaManager media={v.media} slug={v.slug} productName={v.name} usage={usage} onChange={(media) => setV((x) => ({ ...x, media, variants: x.variants.map((row) => ({ ...row, mediaIds: row.mediaIds.filter((id) => media.some((m) => m.id === id)) })) }))} />
+            <MediaManager media={v.media} slug={v.slug} productName={v.name} usage={usage} zodiacSign={v.zodiacSign} onChange={(media) => setV((x) => ({ ...x, media, variants: x.variants.map((row) => ({ ...row, mediaIds: row.mediaIds.filter((id) => media.some((m) => m.id === id)) })) }))} />
           </Card>
         </section>
 

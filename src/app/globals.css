@@ -62,6 +62,8 @@
   --animate-float: float 7s ease-in-out infinite;
   --animate-rise: rise 9s linear infinite;
   --animate-spin-slow: spin 90s linear infinite;
+  --animate-orbit-cw: orbit-cw 28s linear infinite;
+  --animate-orbit-ccw: orbit-ccw 28s linear infinite;
 }
 
 /* ── Element materials: one <Surface> reads these (docs/09 §3). ── */
@@ -377,6 +379,63 @@ html[data-perf="lite"] .twinkle {
   from { transform: translateY(0) scale(1); opacity: 0; }
   10% { opacity: 0.9; }
   to { transform: translateY(-110vh) scale(0.4); opacity: 0; }
+}
+
+/* ── Zodiac Wheel continuous orbital rotation with hover-pause ── */
+@keyframes orbit-cw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-ccw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+.orbit-track {
+  animation: orbit-cw 28s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.orbit-item {
+  animation: orbit-ccw 28s linear infinite;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+/* Pause the orbital rotation when user hovers over the zodiac wheel navigation */
+.zodiac-wheel:hover .orbit-track,
+.zodiac-wheel:hover .orbit-item,
+.zodiac-wheel:hover .animate-orbit-cw,
+.zodiac-wheel:hover .animate-orbit-ccw,
+.zodiac-wheel:hover .animate-spin-slow,
+.orbit-track:hover,
+.orbit-item:hover {
+  animation-play-state: paused !important;
+}
+
+@keyframes celestial-glow {
+  0%, 100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.06);
+  }
+}
+
+.animate-celestial-glow {
+  animation: celestial-glow 7s ease-in-out infinite;
 }
 
 /* Low-end devices and reduced transparency: solid surfaces, no blur (docs/09 §3). */

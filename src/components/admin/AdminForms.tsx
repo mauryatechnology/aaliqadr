@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { adjustStockAction, createCouponAction, saveSettingsAction, setRoleAction, toggleCouponAction } from "@/actions/admin/store";
+import { adjustStockAction, createCouponAction, setRoleAction, toggleCouponAction } from "@/actions/admin/store";
 import type { FormState } from "@/actions/admin/shared";
 import { btnPrimary, btnSecondary, FieldLabel, inputCls } from "./ui";
 import { FormStatus } from "./FormStatus";
@@ -106,55 +106,6 @@ export function CouponToggle({ code, active }: { code: string; active: boolean }
       <input type="hidden" name="active" value={String(!active)} />
       <button type="submit" disabled={pending} className={`${btnSecondary} h-8 px-3 text-xs`}>{pending ? <Loader2 className="size-3.5 animate-spin" /> : active ? "Pause" : "Enable"}</button>
       {state.error && <span className="text-xs text-red-700">{state.error}</span>}
-    </form>
-  );
-}
-
-export interface SettingsValues {
-  freeShippingAbove: number;
-  slab1UptoG: number;
-  slab1Price: number;
-  slab2UptoG: number;
-  slab2Price: number;
-  extraPer500g: number;
-  codEnabled: boolean;
-  codMaxOrder: number;
-  codFee: number;
-  giftWrap: number;
-  reservationMinutes: number;
-}
-
-export function SettingsForm({ values }: { values: SettingsValues }) {
-  const [state, action, pending] = useActionState(saveSettingsAction, idle);
-  const fe = (k: string) => state.fieldErrors?.[k]?.[0];
-  return (
-    <form action={action} className="flex flex-col gap-6">
-      <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <legend className="mb-2 text-sm font-semibold">Shipping</legend>
-        <FieldLabel label="Free shipping above ₹"><input name="freeShippingAbove" type="number" min={0} defaultValue={values.freeShippingAbove} className={inputCls} /></FieldLabel>
-        <FieldLabel label="Up to (grams)"><input name="slab1UptoG" type="number" min={1} defaultValue={values.slab1UptoG} className={inputCls} /></FieldLabel>
-        <FieldLabel label="Charge ₹"><input name="slab1Price" type="number" min={0} defaultValue={values.slab1Price} className={inputCls} /></FieldLabel>
-        <div className="hidden md:block" />
-        <FieldLabel label="Then up to (grams)" error={fe("slab2UptoG")}><input name="slab2UptoG" type="number" min={1} defaultValue={values.slab2UptoG} className={inputCls} /></FieldLabel>
-        <FieldLabel label="Charge ₹"><input name="slab2Price" type="number" min={0} defaultValue={values.slab2Price} className={inputCls} /></FieldLabel>
-        <div className="hidden md:block" />
-        <FieldLabel label="Each extra 500 g ₹" className="md:col-span-2"><input name="extraPer500g" type="number" min={0} defaultValue={values.extraPer500g} className={inputCls} /></FieldLabel>
-      </fieldset>
-      <fieldset className="grid grid-cols-1 gap-4 border-t border-neutral-200 pt-5 md:grid-cols-3">
-        <legend className="mb-2 pt-5 text-sm font-semibold">Cash on delivery</legend>
-        <label className="flex items-center gap-2 text-sm md:col-span-3"><input type="checkbox" name="codEnabled" defaultChecked={values.codEnabled} className="size-4" /> Offer cash on delivery</label>
-        <FieldLabel label="Max COD order ₹"><input name="codMaxOrder" type="number" min={0} defaultValue={values.codMaxOrder} className={inputCls} /></FieldLabel>
-        <FieldLabel label="COD fee ₹"><input name="codFee" type="number" min={0} defaultValue={values.codFee} className={inputCls} /></FieldLabel>
-      </fieldset>
-      <fieldset className="grid grid-cols-1 gap-4 border-t border-neutral-200 pt-5 md:grid-cols-3">
-        <legend className="mb-2 pt-5 text-sm font-semibold">Checkout</legend>
-        <FieldLabel label="Gift wrap ₹"><input name="giftWrap" type="number" min={0} defaultValue={values.giftWrap} className={inputCls} /></FieldLabel>
-        <FieldLabel label="Hold unpaid orders (minutes)" hint="Stock is reserved this long while customers pay." error={fe("reservationMinutes")}><input name="reservationMinutes" type="number" min={15} max={120} defaultValue={values.reservationMinutes} className={inputCls} /></FieldLabel>
-      </fieldset>
-      <div className="flex flex-wrap items-center gap-3 border-t border-neutral-200 pt-5">
-        <button type="submit" disabled={pending} className={btnPrimary}>{pending && <Loader2 className="size-4 animate-spin" />} Save settings</button>
-        <FormStatus state={state} />
-      </div>
     </form>
   );
 }

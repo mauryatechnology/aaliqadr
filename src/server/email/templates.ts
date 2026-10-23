@@ -120,3 +120,38 @@ export function adminNewOrderEmail(to: string, o: OrderEmailData & { adminUrl: s
     text: `New order ${o.orderId} from ${o.name}: ${formatPrice(o.totalP)}. ${o.adminUrl}`,
   };
 }
+
+const RETURN_COPY: Record<string, { title: string; body: string }> = {
+  requested: { title: "We've received your request", body: "Our team will look at your photos and video and reply within 2 working days." },
+  approved: { title: "Your request is approved", body: "We'll make this right. You'll hear from us again as soon as it's on its way." },
+  rejected: { title: "About your request", body: "We weren't able to approve this request. The note below explains why; reply to this email if you'd like us to look again." },
+  received: { title: "We've received the item", body: "Thank you for sending it back. We're completing your refund or replacement now." },
+  refunded: { title: "Your refund is on its way", body: "Refunds reach the original payment method in 5–7 bank working days." },
+  replaced: { title: "Your replacement has shipped", body: "A fresh one is on its way to you." },
+  closed: { title: "Your request is closed", body: "Thank you for your patience." },
+};
+
+/** Customer update for a return / damage claim (docs/08 §5). */
+export function returnUpdateEmail(r: { id: string; orderId: string; name: string; email: string; status: string; note?: string; refundP?: number; awb?: string; url: string }): Mail {
+  const copy = RETURN_COPY[r.status] ?? { title: "An update on your request", body: "" };
+  const extra = [
+    r.status === "refunded" && r.refundP ? `Refund amount: <strong>${formatPrice(r.refundP)}</strong>.` : "",
+    r.awb ? `Tracking number: <strong>${esc(r.awb)}</strong>.` : "",
+    r.note ? esc(r.note) : "",
+  ].filter(Boolean);
+  return {
+    to: r.email,
+    subject: `${copy.title} · ${r.id} (order ${r.orderId})`,
+    html: layout(copy.title, p(`Hi ${esc(r.name.split(" ")[0] ?? r.name)},`) + p(copy.body) + extra.map((x) => p(x)).join(""), { label: "View your order", href: r.url }),
+    text: `${copy.title}\n\n${copy.body}\n${extra.join("\n").replace(/<[^>]+>/g, "")}\n\nRequest ${r.id} for order ${r.orderId}: ${r.url}`,
+  };
+}
+
+export function adminNewReturnEmail(to: string, r: { id: string; orderId: string; reason: string; name: string; adminUrl: string }): Mail {
+  return {
+    to,
+    subject: `New claim ${r.id} on ${r.orderId}: ${r.reason}`,
+    html: layout(`New claim ${r.id}`, p(`${esc(r.name)} reported a problem with order ${esc(r.orderId)}: <strong>${esc(r.reason)}</strong>.`), { label: "Review the claim", href: r.adminUrl }),
+    text: `${r.name} reported "${r.reason}" on order ${r.orderId}. Review: ${r.adminUrl}`,
+  };
+}

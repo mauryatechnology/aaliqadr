@@ -138,7 +138,16 @@ function fragrance(sign: ZodiacSign): ProductDTO {
       "Spray on pulse points from 15 cm: wrists, neck and behind the ears. Let it dry; never rub. Layer over unscented moisturiser for longer wear.",
     compatibleSigns: sign.compatible,
     variants: fragranceVariants(sign),
-    media: [],
+    media: [
+      {
+        id: `bottle-${sign.slug}`,
+        kind: "image",
+        url: `/bottles/${sign.slug}.svg`,
+        alt: `${f.name}, the ${sign.name} (${sign.rashi}) luxury perfume bottle`,
+        width: 720,
+        height: 1290,
+      },
+    ],
     legal,
     hsnCode: "33030050",
     gstRateBps: 1800,
@@ -165,7 +174,16 @@ const discoveryCoffret: ProductDTO = {
   variants: [
     { sku: "AQ-DSC-24", label: "12 × 2 ml", optionValues: [], mediaIds: [], volumeMl: 24, mrpP: 219900, priceP: 199900, stock: 60, lowStockThreshold: 10, weightG: 320, isActive: true, codAllowed: false, maxPerOrder: 3 },
   ],
-  media: [],
+  media: [
+    {
+      id: "bottle-discovery-coffret",
+      kind: "image",
+      url: "/bottles/brand.svg",
+      alt: "Zodiac Discovery Coffret 12-sign luxury fragrance coffret",
+      width: 720,
+      height: 1290,
+    },
+  ],
   legal,
   hsnCode: "33030050",
   gstRateBps: 1800,
@@ -193,7 +211,16 @@ const elementTrios: ProductDTO[] = ELEMENTS.map((el, i) => {
     variants: [
       { sku: `AQ-TRI-${el.slice(0, 3).toUpperCase()}`, label: "3 × 10 ml", optionValues: [], mediaIds: [], volumeMl: 30, mrpP: 349900, priceP: 299900, stock: 20, lowStockThreshold: 5, weightG: 420, isActive: true, codAllowed: true, maxPerOrder: 3 },
     ],
-    media: [],
+    media: [
+      {
+        id: `bottle-trio-${el}`,
+        kind: "image",
+        url: `/bottles/${info.signs[0]}.svg`,
+        alt: `${info.label} Element Trio luxury perfume set`,
+        width: 720,
+        height: 1290,
+      },
+    ],
     legal,
     hsnCode: "33030050",
     gstRateBps: 1800,

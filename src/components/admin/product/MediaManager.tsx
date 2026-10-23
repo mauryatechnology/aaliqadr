@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState, type DragEvent } from "react";
-import { GripVertical, ImagePlus, Loader2, Play, Star, Trash2 } from "lucide-react";
+import { GripVertical, ImagePlus, Loader2, Play, Sparkles, Star, Trash2 } from "lucide-react";
 import { newId, uploadImage, uploadVideo } from "@/lib/upload-client";
 import { cn } from "@/lib/cn";
 import type { MediaInput } from "@/schemas/product";
@@ -18,6 +18,7 @@ export function MediaManager({
   slug,
   productName,
   usage,
+  zodiacSign,
 }: {
   media: MediaInput[];
   onChange: (next: MediaInput[]) => void;
@@ -25,11 +26,30 @@ export function MediaManager({
   productName: string;
   /** media id → variant labels that show it first */
   usage: Map<string, string[]>;
+  zodiacSign?: string;
 }) {
   const [busy, setBusy] = useState<string>("");
   const [error, setError] = useState("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  const hasBottleSvg = media.some((m) => m.url.includes("/bottles/"));
+  const defaultBottleUrl = `/bottles/${zodiacSign || "brand"}.svg`;
+
+  function addDefaultBottle() {
+    if (media.length >= 20 || hasBottleSvg) return;
+    onChange([
+      ...media,
+      {
+        id: `bottle-${zodiacSign || "brand"}-${Date.now()}`,
+        kind: "image",
+        url: defaultBottleUrl,
+        alt: `${productName || "Product"} signature bottle artwork`,
+        width: 720,
+        height: 1290,
+      },
+    ]);
+  }
 
   async function addFiles(files: FileList | File[]) {
     const list = Array.from(files).slice(0, 20 - media.length);
@@ -99,14 +119,21 @@ export function MediaManager({
             onDrop={(e) => onDrop(e, i)}
             className={cn("flex flex-col gap-2 rounded-lg border bg-white p-2 transition-shadow", overIndex === i && dragIndex !== null && dragIndex !== i ? "border-neutral-900 ring-2 ring-neutral-900/20" : "border-neutral-200", dragIndex === i && "opacity-50")}
           >
-            <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-neutral-100">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-md bg-neutral-900/90">
               {m.kind === "video" ? (
                 <>
                   {m.posterUrl ? <Image src={m.posterUrl} alt="" fill sizes="220px" className="object-cover" /> : <video src={m.url} muted className="absolute inset-0 size-full object-cover" />}
                   <span className="absolute inset-0 grid place-items-center"><span className="grid size-10 place-items-center rounded-full bg-black/60 text-white"><Play className="size-5" /></span></span>
                 </>
               ) : (
-                <Image src={m.url} alt={m.alt} fill sizes="220px" className="object-cover" />
+                <Image
+                  src={m.url}
+                  alt={m.alt}
+                  fill
+                  sizes="220px"
+                  unoptimized={m.url.endsWith(".svg")}
+                  className={m.url.endsWith(".svg") ? "object-contain p-2 drop-shadow-[0_8px_16px_rgba(0,0,0,0.6)]" : "object-cover"}
+                />
               )}
               {i === 0 && <span className="absolute left-2 top-2 rounded bg-neutral-900 px-1.5 py-0.5 text-[11px] font-medium text-white">Cover</span>}
               <span className="absolute right-2 top-2 cursor-grab rounded bg-white/90 p-1 text-neutral-600 shadow active:cursor-grabbing" title="Drag to reorder"><GripVertical className="size-4" /></span>
@@ -148,9 +175,20 @@ export function MediaManager({
         )}
       </ul>
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <p className="text-xs text-neutral-500">
-        Drag to reorder. The cover appears on cards and social previews. Square or 4:5 photos at 1600 px or more look best. Without any photos the store shows the sign&apos;s bottle artwork.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        <p className="text-xs text-neutral-500">
+          Drag to reorder. The cover appears on cards and social previews. Multiple images form the swipeable gallery on the product page.
+        </p>
+        {!hasBottleSvg && media.length < 20 && (
+          <button
+            type="button"
+            onClick={addDefaultBottle}
+            className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-700 shadow-sm hover:border-neutral-900 hover:bg-white"
+          >
+            <Sparkles className="size-3.5 text-amber-600" /> Add signature bottle artwork
+          </button>
+        )}
+      </div>
     </div>
   );
 }

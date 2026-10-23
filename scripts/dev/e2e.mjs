@@ -35,6 +35,7 @@ const productBefore = await products.findOne({ "variants.sku": SKU });
 const vBefore = productBefore.variants.find((v) => v.sku === SKU);
 const snapshot = { stock: vBefore.stock, reserved: vBefore.reserved ?? 0, salesCount: productBefore.salesCount ?? 0 };
 const createdOrderIds = [];
+const ratingBefore = await products.findOne({ slug: "ember-crown-aries" }, { projection: { ratingAvg: 1, ratingCount: 1 } });
 
 // ── Browser (CDP) ────────────────────────────────────────────────────────────
 const port = 9400 + Math.floor(Math.random() * 300);
@@ -195,6 +196,64 @@ check("Wrong key does not reveal the order", !wrongText.includes("12 Test Street
 const invoice = await (await fetch(`${BASE}/invoice/${codId}?k=${encodeURIComponent(key)}`)).text();
 check("Invoice renders with amount in words", invoice.includes("Tax Invoice") && invoice.includes("Rupees"));
 
+// ── 6. Damage claim: customer reports → admin approves → refund (COD, manual) ─
+const clickLast = (tag, text) => evaluate(`(() => { const els = [...document.querySelectorAll(${JSON.stringify(tag)})].filter(e => e.textContent.trim() === ${JSON.stringify(text)} && !e.disabled); const el = els.at(-1); if (!el) return false; el.click(); return true; })()`);
+await go(`/order/${codId}?k=${encodeURIComponent(key)}`);
+check("Delivered order offers 'Report a problem'", await waitFor(`[...document.querySelectorAll("button")].some(b => b.textContent.includes("Report a problem"))`, 10000));
+await clickText("button", "Report a problem");
+await waitFor(`!!document.querySelector("form textarea")`, 5000);
+await fill("form select", "missing_item");
+await fill("form textarea", "E2E: the outer box was empty when it arrived.");
+await clickText("button", "Send request");
+await waitFor(`document.body.innerText.includes("RT-")`, 15000);
+const claim = await dbx.collection("returnrequests").findOne({ orderId: codId });
+check("Claim created with an RT- id", !!claim && /^RT-\d{6}$/.test(claim._id), claim?._id);
+if (claim) {
+  await go(`/admin/returns/${claim._id}`);
+  await waitFor(`document.body.innerText.includes("Next step")`, 10000);
+  await fill("select", "refund");
+  await clickLast("button", "Approve");
+  check("Admin approves the claim", await waitFor(`document.body.innerText.includes("Marked approved")`, 10000));
+  await go(`/admin/returns/${claim._id}`);
+  await waitFor(`[...document.querySelectorAll('[role="radio"]')].some(b => b.textContent === "Refund")`, 10000);
+  await evaluate(`[...document.querySelectorAll('[role="radio"]')].find(b => b.textContent === "Refund").click()`);
+  await waitFor(`!!document.querySelector('input[type="number"]')`, 5000);
+  await fill('input[type="number"]', "100");
+  await fill('input:not([type])', "UPI-E2E-1");
+  await clickLast("button", "Refund");
+  check("Admin records the refund", await waitFor(`document.body.innerText.includes("Marked refunded")`, 10000));
+  const after = await dbx.collection("returnrequests").findOne({ _id: claim._id });
+  const o2 = await orders.findOne({ _id: codId });
+  const pay = await dbx.collection("payments").findOne({ orderId: codId, kind: "refund" });
+  check("Claim refunded; order refund and payment recorded", after?.status === "refunded" && after.refundP === 10000 && o2.payment.refundedP === 10000 && o2.payment.status === "partially_refunded" && pay?.method === "manual", `${after?.status} ${o2.payment.status}`);
+}
+
+// ── 7. Review: write → moderate → published rating ──────────────────────────
+await go("/perfume/ember-crown-aries#reviews");
+check("Product page shows the review form for a signed-in visitor", await waitFor(`[...document.querySelectorAll("button")].some(b => b.textContent.includes("Write a review"))`, 15000));
+await clickText("button", "Write a review");
+await waitFor(`!!document.querySelector('[aria-label="5 stars"]')`, 5000);
+await evaluate(`document.querySelector('[aria-label="5 stars"]').click()`);
+await fill("form textarea", "E2E review: warm saffron opening and it lasts all evening.");
+await clickText("button", "Submit review");
+check("Review submitted for moderation", await waitFor(`document.body.innerText.includes("once our team has read it")`, 10000));
+const review = await dbx.collection("reviews").findOne({ userId: String(adminUser._id) });
+check("Review stored as pending", review?.status === "pending" && review.rating === 5);
+await go("/admin/reviews");
+await waitFor(`document.body.innerText.includes("E2E review")`, 10000);
+await clickText("button", "Publish");
+await waitFor(`document.body.innerText.includes("Published.")`, 10000);
+const rated = await products.findOne({ slug: "ember-crown-aries" });
+check("Publishing updates the product rating", rated.ratingCount === 1 && rated.ratingAvg === 5, `${rated.ratingAvg}/${rated.ratingCount}`);
+
+// ── 8. Variant deep link and catalogue pages ─────────────────────────────────
+await go("/perfume/ember-crown-aries?v=AQ-ARI-100");
+check("?v= selects that variant", await waitFor(`document.querySelector('[role="radio"][aria-checked="true"]')?.textContent.includes("100 ml")`, 8000));
+for (const path of ["/collections/fire-signs", "/category/zodiac-extraits", "/admin/categories", "/admin/collections", "/admin/hsn", "/admin/reports", "/admin/content"]) {
+  await go(path);
+  check(`Page ${path}`, await waitFor(`!!document.querySelector("h1") && !document.body.innerText.includes("Application error")`, 8000), await evaluate(`document.querySelector("h1")?.textContent`));
+}
+
 // ── Cleanup ──────────────────────────────────────────────────────────────────
 ws.close();
 chrome.kill();
@@ -204,11 +263,16 @@ await dbx.collection("stockmovements").deleteMany({ ref: { $in: createdOrderIds 
 await dbx.collection("auditlogs").deleteMany({ "entity.id": { $in: createdOrderIds } });
 await dbx.collection("webhookevents").deleteMany({ _id: { $regex: "^razorpay:evt_e2e_" } });
 await dbx.collection("addresses").deleteMany({ fullName: "E2E Customer" });
+await dbx.collection("returnrequests").deleteMany({ orderId: { $in: createdOrderIds } });
+await dbx.collection("auditlogs").deleteMany({ "entity.kind": "return", "detail.orderId": { $in: createdOrderIds } });
+await dbx.collection("reviews").deleteMany({ userId: String(adminUser._id) });
+await dbx.collection("auditlogs").deleteMany({ "actor.userId": String(adminUser._id) });
+await products.updateOne({ slug: "ember-crown-aries" }, { $set: { ratingAvg: ratingBefore?.ratingAvg ?? 0, ratingCount: ratingBefore?.ratingCount ?? 0 } });
 await dbx.collection("session").deleteMany({ userId: adminUser._id });
 await dbx.collection("account").deleteMany({ userId: adminUser._id });
 await dbx.collection("verification").deleteMany({ identifier: { $regex: "e2e-" } });
 await dbx.collection("user").deleteMany({ email: { $in: [ADMIN, CUSTOMER] } });
-await dbx.collection("counters").deleteMany({ $or: [{ _id: "order" }, { _id: { $regex: "^invoice:" } }] });
+await dbx.collection("counters").deleteMany({ $or: [{ _id: "order" }, { _id: "return" }, { _id: { $regex: "^invoice:" } }] });
 await products.updateOne(
   { _id: productBefore._id, "variants.sku": SKU },
   { $set: { "variants.$.stock": snapshot.stock, "variants.$.reserved": snapshot.reserved, salesCount: snapshot.salesCount } },

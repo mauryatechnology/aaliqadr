@@ -83,15 +83,26 @@ export function productToInput(d: LeanProduct, collectionIds: string[]): EditorV
       stock: v.stock,
       reserved: v.reserved ?? 0,
     })),
-    media: (d.media ?? []).map((m, i) => ({
-      id: m.id ?? `m${i}`,
-      kind: (m.kind ?? "image") as "image" | "video",
-      url: m.url,
-      ...(m.posterUrl ? { posterUrl: m.posterUrl } : {}),
-      alt: m.alt,
-      width: m.width,
-      height: m.height,
-    })),
+    media: (d.media && d.media.length > 0)
+      ? d.media.map((m, i) => ({
+          id: m.id ?? `m${i}`,
+          kind: (m.kind ?? "image") as "image" | "video",
+          url: m.url,
+          ...(m.posterUrl ? { posterUrl: m.posterUrl } : {}),
+          alt: m.alt,
+          width: m.width,
+          height: m.height,
+        }))
+      : [
+          {
+            id: `bottle-${d.zodiacSign ?? "brand"}`,
+            kind: "image" as const,
+            url: `/bottles/${d.zodiacSign ?? "brand"}.svg`,
+            alt: `${d.name} signature bottle artwork`,
+            width: 720,
+            height: 1290,
+          },
+        ],
     specs: (d.specs ?? []).map((s) => ({ label: s.label ?? "", value: s.value ?? "" })),
     aPlus: d.aPlus ? (JSON.parse(JSON.stringify(d.aPlus)) as EditorValue["aPlus"]) : [],
     display: { notes: d.display?.notes ?? true, profile: d.display?.profile ?? true, specs: d.display?.specs ?? true },

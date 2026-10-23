@@ -34,6 +34,7 @@ This folder is the complete pre-development specification. Nothing here is code.
 | 14 | [Compliance & Legal (India)](14-Compliance-Legal-India.md) | You are writing policies, product listings, invoices, or handling personal data |
 | 15 | [Testing, QA & Observability](15-Testing-QA-Observability.md) | You are writing tests or setting up monitoring |
 | 16 | [Build Roadmap & Checklists](16-Build-Roadmap.md) | You are planning sprints or doing a go-live review |
+| 17 | [Catalogue & Admin Expansion](17-Catalogue-and-Admin-Expansion.md) | You are working on categories, collections, variants, the product editor, reviews, claims, content or reports |
 
 ---
 

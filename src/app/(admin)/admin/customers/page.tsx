@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { routes } from "@/lib/routes";
 import { Search } from "lucide-react";
 import { Suspense } from "react";
 import { formatPrice } from "@/lib/money";
@@ -45,7 +47,7 @@ async function AdminCustomers({ searchParams }: PageProps<"/admin/customers">) {
           <tbody>
             {customers.map((c) => (
               <tr key={c.id}>
-                <td className={td}><span className="font-medium">{c.name || "—"}</span><span className="block text-xs text-neutral-500">{seePii ? c.email : mask(c.email)}</span></td>
+                <td className={td}><Link href={routes.adminCustomer(c.id)} className="font-medium underline-offset-4 hover:underline">{c.name || "—"}</Link><span className="block text-xs text-neutral-500">{seePii ? c.email : mask(c.email)}</span></td>
                 <td className={td}>{c.joined ? adminDay.format(new Date(c.joined)) : "—"}</td>
                 <td className={`${td} text-right tabular-nums`}>{c.orders}</td>
                 <td className={`${td} text-right tabular-nums`}>{c.spentP ? formatPrice(c.spentP) : "—"}</td>

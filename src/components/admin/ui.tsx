@@ -79,12 +79,20 @@ export const STATUS_TONE: Record<string, Tone> = {
   active: "green",
   draft: "amber",
   archived: "neutral",
+  // Returns & claims
+  requested: "amber",
+  approved: "blue",
+  received: "violet",
+  replaced: "green",
+  rejected: "red",
+  closed: "neutral",
 };
 
-export function Table({ children, className }: { children: ReactNode; className?: string }) {
+/** `compact` drops the minimum width, for narrow tables inside half-width cards. */
+export function Table({ children, className, compact = false }: { children: ReactNode; className?: string; compact?: boolean }) {
   return (
     <div className={cn("overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm", className)}>
-      <table className="w-full min-w-[640px] border-collapse text-left text-sm">{children}</table>
+      <table className={cn("w-full border-collapse text-left text-sm", !compact && "min-w-[640px]")}>{children}</table>
     </div>
   );
 }

@@ -200,6 +200,8 @@ export interface SettingsDoc {
   codFeeP: number;
   giftWrapP: number;
   reservationMinutes: number;
+  /** How long after delivery a damage/leak/wrong-item claim can be raised. */
+  returnWindowHours: number;
 }
 const SettingsSchema = new Schema<SettingsDoc>(
   {
@@ -218,6 +220,7 @@ const SettingsSchema = new Schema<SettingsDoc>(
     codFeeP: { type: Number, default: 4900 },
     giftWrapP: { type: Number, default: 9900 },
     reservationMinutes: { type: Number, default: 30 },
+    returnWindowHours: { type: Number, default: 48 },
   },
   { timestamps: true },
 );

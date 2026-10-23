@@ -74,7 +74,14 @@ export function ProductGallery({ media, name, fallback, viewTransitionName }: { 
               onClick={() => go(i)}
               className={cn("relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg ring-1 transition lg:w-full", i === index ? "ring-2 ring-[var(--z-primary)]" : "ring-white/10 opacity-70 hover:opacity-100")}
             >
-              <Image src={m.kind === "video" ? (m.posterUrl ?? m.url) : m.url} alt="" fill sizes="80px" className="object-cover" />
+              <Image
+                src={m.kind === "video" ? (m.posterUrl ?? m.url) : m.url}
+                alt=""
+                fill
+                sizes="80px"
+                unoptimized={m.url.endsWith(".svg")}
+                className={m.url.endsWith(".svg") ? "object-contain p-1.5" : "object-cover"}
+              />
               {m.kind === "video" && <span className="absolute inset-0 grid place-items-center bg-black/30"><Play className="size-4 text-white" /></span>}
             </button>
           ))}
@@ -100,7 +107,19 @@ export function ProductGallery({ media, name, fallback, viewTransitionName }: { 
                 <video src={m.url} poster={m.posterUrl} controls playsInline muted preload="none" className="size-full object-cover" aria-label={m.alt} />
               ) : (
                 <button type="button" onClick={() => setLightbox(true)} className="relative block size-full cursor-zoom-in" aria-label={`Enlarge ${m.alt}`}>
-                  <Image src={m.url} alt={m.alt} fill quality={85} sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" preload={i === 0} loading={i === 0 ? "eager" : "lazy"} placeholder={m.blurDataURL ? "blur" : "empty"} blurDataURL={m.blurDataURL} />
+                  <Image
+                    src={m.url}
+                    alt={m.alt}
+                    fill
+                    quality={85}
+                    sizes="(min-width: 1024px) 50vw, 100vw"
+                    unoptimized={m.url.endsWith(".svg")}
+                    className={m.url.endsWith(".svg") ? "object-contain p-6 drop-shadow-[0_15px_30px_rgba(0,0,0,.45)]" : "object-cover"}
+                    preload={i === 0}
+                    loading={i === 0 ? "eager" : "lazy"}
+                    placeholder={m.blurDataURL && !m.url.endsWith(".svg") ? "blur" : "empty"}
+                    blurDataURL={m.blurDataURL}
+                  />
                 </button>
               )}
             </div>
@@ -178,7 +197,7 @@ function Lightbox({ items, start, onClose }: { items: MediaItem[]; start: number
             setOrigin(`${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`);
           }}
         >
-          <Image src={m.url} alt={m.alt} fill quality={85} sizes="100vw" className="object-contain transition-transform duration-300" style={{ transform: zoom ? "scale(2.2)" : "scale(1)", transformOrigin: origin }} />
+          <Image src={m.url} alt={m.alt} fill quality={85} sizes="100vw" unoptimized={m.url.endsWith(".svg")} className="object-contain transition-transform duration-300" style={{ transform: zoom ? "scale(2.2)" : "scale(1)", transformOrigin: origin }} />
         </button>
         <div className="absolute right-4 top-4 flex gap-2">
           <button type="button" aria-label={zoom ? "Zoom out" : "Zoom in"} onClick={() => setZoom((z) => !z)} className="grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20">{zoom ? <ZoomOut className="size-5" /> : <ZoomIn className="size-5" />}</button>

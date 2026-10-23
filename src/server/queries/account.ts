@@ -3,6 +3,8 @@ import { db } from "@/server/db/connect";
 import { Order, type OrderDoc } from "@/server/models/Order";
 import { Address, type AddressDoc } from "@/server/models/commerce";
 import { keysMatch } from "@/server/services/orders";
+import { claimWindow } from "@/server/services/returns";
+import { ReturnRequest, type ReturnDoc } from "@/server/models/engagement";
 import type { SessionUser } from "@/server/auth";
 import { hasRole } from "@/server/auth";
 
@@ -63,4 +65,27 @@ export async function listOrdersForUser(user: SessionUser, limit = 50) {
     .limit(limit)
     .select("_id createdAt status pricing.totalP payment.method payment.status items.name items.qty items.zodiacSign")
     .lean<Pick<OrderDoc, "_id" | "createdAt" | "status" | "pricing" | "payment" | "items">[]>();
+}
+
+/** Claims on an order, with only the history the customer should see, and whether one can be raised. */
+export async function getClaimsForOrder(order: Pick<OrderDoc, "_id" | "status" | "shipment">) {
+  await db();
+  const [claims, window] = await Promise.all([
+    ReturnRequest.find({ orderId: order._id }).sort({ createdAt: -1 }).lean<ReturnDoc[]>(),
+    claimWindow(order),
+  ]);
+  const open = claims.some((c) => ["requested", "approved", "received"].includes(c.status));
+  return {
+    canClaim: window.open && !open,
+    until: window.until?.toISOString(),
+    claims: claims.map((c) => ({
+      id: c._id,
+      status: c.status,
+      reason: c.reason,
+      createdAt: c.createdAt.toISOString(),
+      refundP: c.refundP,
+      replacementAwb: c.replacement?.awb,
+      history: c.history.filter((h) => h.visibleToCustomer).map((h) => ({ at: new Date(h.at).toISOString(), status: h.status, note: h.note })),
+    })),
+  };
 }

@@ -7,6 +7,7 @@ import { routes } from "@/lib/routes";
 import { Logo } from "@/components/brand/Logo";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { getAdminBadges } from "@/server/admin/ops";
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s · Aaliqadr Admin" },
@@ -46,15 +47,16 @@ async function Gate({ children }: { children: React.ReactNode }) {
     );
   }
   const role = user.role === "customer" ? "staff" : user.role;
+  const badges = await getAdminBadges();
   return (
     <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:px-6 lg:py-6">
-      <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)]">
+      <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:thin]">
         <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
           <Link href="/admin" className="flex items-center gap-2 text-neutral-900" aria-label="Admin home">
             <Logo variant="mark" className="h-8 w-auto text-gold-deep" title="Aaliqadr" />
             <span className="text-sm font-semibold tracking-[0.2em]">ADMIN</span>
           </Link>
-          <AdminNav role={role} />
+          <AdminNav role={role} badges={badges} />
         </div>
         <div className="mt-auto hidden flex-col gap-3 border-t border-neutral-200 pt-4 text-sm lg:flex">
           <div>

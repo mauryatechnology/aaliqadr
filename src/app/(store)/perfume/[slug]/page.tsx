@@ -20,6 +20,7 @@ import { ProductStateProvider } from "@/components/product/ProductState";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { APlusBlocks } from "@/components/product/APlusBlocks";
 import { RecentlyViewed } from "@/components/product/RecentlyViewed";
+import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductCard } from "@/components/product/ProductCard";
 import { Reveal } from "@/components/motion/Reveal";
 import { Parallax } from "@/components/motion/Parallax";
@@ -181,7 +182,7 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
     .filter((x, i, all) => all.findIndex((y) => y.id === x.id) === i)
     .slice(0, 4);
   const byId = new Map(categories.map((c) => [c.id, c]));
-  const trail = [];
+  const trail: typeof categories = [];
   for (let c = p.categoryId ? byId.get(p.categoryId) : undefined; c && trail.length < 4; c = c.parentId ? byId.get(c.parentId) : undefined) trail.unshift(c);
   const active = p.variants.filter((v) => v.isActive);
   const cover = p.media.find((m) => m.kind === "image");
@@ -354,17 +355,17 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
             </div>
           </div>
         </div>
-      </ProductStateProvider>
-    </PointerDepth>
+        </ProductStateProvider>
+      </PointerDepth>
 
-      {p.notes && (
+      {p.notes && p.display.notes && (
         <section className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6">
           <Reveal className="mb-10 flex flex-col items-center gap-3">
             <p className="eyebrow">Olfactive pyramid</p>
             <h2 className="font-display text-4xl sm:text-5xl">How it unfolds</h2>
           </Reveal>
           <NotesPyramid notes={p.notes} />
-          {p.profile && (
+          {p.profile && p.display.profile && (
             <Reveal className="surface mt-12 p-6 text-left sm:p-8">
               <ScentProfile profile={p.profile} />
               <p className="text-muted mt-6 text-sm">
@@ -377,11 +378,13 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
 
       {p.aPlus && p.aPlus.length > 0 && <APlusBlocks blocks={p.aPlus} />}
 
+      <ProductReviews productId={p.id} slug={p.slug} ratingAvg={p.ratingAvg} ratingCount={p.ratingCount} />
+
       {related.length > 0 && (
         <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
           <Reveal className="mb-10 flex flex-col gap-3">
             <p className="eyebrow">Pairs well with</p>
-            <h2 className="font-display text-4xl">Compatible signs</h2>
+            <h2 className="font-display text-4xl">{sign ? "Compatible signs" : "You may also like"}</h2>
           </Reveal>
           <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {related.map((r) => (
@@ -393,13 +396,14 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
         </section>
       )}
 
-      <RecentlyViewed current={{ slug: p.slug, name: p.name, priceP: active[0]?.priceP ?? 0, image: cover?.url }} />
+      <RecentlyViewed current={{ slug: p.slug, name: p.name, priceP: active[0]?.priceP ?? 0, image: cover?.url, sign: p.zodiacSign }} />
 
       <JsonLd data={productLd(p)} />
       <JsonLd
         data={breadcrumbLd([
           { name: "Home", path: "/" },
           { name: "Shop", path: "/shop" },
+          ...trail.map((c) => ({ name: c.name, path: `/category/${c.slug}` })),
           { name: p.name, path: `/perfume/${p.slug}` },
         ])}
       />

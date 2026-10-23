@@ -5,6 +5,7 @@ import { getSessionUser } from "@/server/auth";
 import { getOrderForViewer } from "@/server/queries/account";
 import { PageHero } from "@/components/layout/PageHero";
 import { OrderDetails } from "@/components/orders/OrderDetails";
+import { OrderClaims } from "@/components/orders/OrderClaims";
 
 export const metadata: Metadata = { title: "Your order", robots: { index: false, follow: false } };
 
@@ -27,5 +28,10 @@ async function Content({ params, searchParams }: Pick<PageProps<"/order/[id]">, 
   const key = typeof sp.k === "string" ? sp.k : undefined;
   const found = await getOrderForViewer(id, viewer, key);
   if (!found) notFound();
-  return <OrderDetails order={found.order} accessKey={found.accessKey} showKeyInLinks={!!key} />;
+  return (
+    <>
+      <OrderDetails order={found.order} accessKey={found.accessKey} showKeyInLinks={!!key} />
+      <OrderClaims order={found.order} accessKey={key} />
+    </>
+  );
 }

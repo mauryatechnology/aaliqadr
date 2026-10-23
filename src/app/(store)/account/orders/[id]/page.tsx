@@ -7,6 +7,7 @@ import { requireUser } from "@/server/auth";
 import { getOrderForViewer } from "@/server/queries/account";
 import { PageHero } from "@/components/layout/PageHero";
 import { OrderDetails } from "@/components/orders/OrderDetails";
+import { OrderClaims } from "@/components/orders/OrderClaims";
 
 export const metadata: Metadata = { title: "Order details", robots: { index: false, follow: false } };
 
@@ -32,5 +33,10 @@ async function Content({ params }: Pick<PageProps<"/account/orders/[id]">, "para
   const user = await requireUser(`/account/orders/${id}`);
   const found = await getOrderForViewer(id, user);
   if (!found) notFound();
-  return <OrderDetails order={found.order} accessKey={found.accessKey} showKeyInLinks={false} />;
+  return (
+    <>
+      <OrderDetails order={found.order} accessKey={found.accessKey} showKeyInLinks={false} />
+      <OrderClaims order={found.order} />
+    </>
+  );
 }

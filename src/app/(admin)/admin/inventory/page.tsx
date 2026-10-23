@@ -5,6 +5,7 @@ import { listInventory } from "@/server/admin/queries";
 import { AdminSkeleton, Badge, Card, PageHeader, Table, td, th } from "@/components/admin/ui";
 import { adminDate } from "@/components/admin/format";
 import { StockAdjustForm } from "@/components/admin/AdminForms";
+import { StockCsvImport } from "@/components/admin/ops/StockCsvImport";
 
 export const metadata = { title: "Inventory" };
 
@@ -26,6 +27,7 @@ async function AdminInventory() {
   return (
     <>
       <PageHeader title="Inventory" description="Available stock is what customers can buy now. Reserved is held by orders awaiting payment. Every change is recorded below." />
+      {canAdjust && <div className="mb-4 flex"><StockCsvImport /></div>}
       <Table>
         <thead><tr><th className={th}>Product · size</th><th className={th}>SKU</th><th className={`${th} text-right`}>Available</th><th className={`${th} text-right`}>Reserved</th><th className={th}>{canAdjust ? "Adjust (+ received / − write-off)" : "Status"}</th></tr></thead>
         <tbody>

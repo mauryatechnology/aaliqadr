@@ -2,12 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { csvRecords } from "@/lib/csv";
 import { rupeesToPaise } from "@/lib/money";
 import { SKU_RE } from "@/lib/sku";
 import { requireRole, ROLES } from "@/server/auth";
 import { db } from "@/server/db/connect";
 import { ObjectId } from "mongodb";
-import { AuditLog, Coupon, Settings } from "@/server/models/commerce";
+import { AuditLog, Coupon } from "@/server/models/commerce";
 import { Product } from "@/server/models/Product";
 import { adjust } from "@/server/services/inventory";
 import { revalidateProducts } from "@/server/services/products";
@@ -126,51 +127,55 @@ export async function toggleCouponAction(_prev: FormState, fd: FormData): Promis
   }
 }
 
-const settingsSchema = z.object({
-  freeShippingAbove: z.coerce.number().min(0).max(100000),
-  slab1UptoG: z.coerce.number().int().min(1).max(20000),
-  slab1Price: z.coerce.number().min(0).max(10000),
-  slab2UptoG: z.coerce.number().int().min(1).max(20000),
-  slab2Price: z.coerce.number().min(0).max(10000),
-  extraPer500g: z.coerce.number().min(0).max(10000),
-  codEnabled: z.enum(["on", ""]).transform((v) => v === "on"),
-  codMaxOrder: z.coerce.number().min(0).max(1000000),
-  codFee: z.coerce.number().min(0).max(10000),
-  giftWrap: z.coerce.number().min(0).max(10000),
-  reservationMinutes: z.coerce.number().int().min(15).max(120),
-}).refine((s) => s.slab2UptoG > s.slab1UptoG, { message: "Second slab must be heavier than the first", path: ["slab2UptoG"] });
+export interface StockImportReport {
+  error?: string;
+  applied: boolean;
+  changes: { sku: string; from: number; to: number; delta: number }[];
+  problems: string[];
+}
 
-export async function saveSettingsAction(_prev: FormState, fd: FormData): Promise<FormState> {
+/**
+ * Stock from a spreadsheet: either a counted `count` (stocktake) or a `delta`, per SKU, with a
+ * reason. Preview first (`apply: false`); every applied change goes through the ledger.
+ */
+export async function importStockCsvAction(text: string, reason: string, apply: boolean): Promise<StockImportReport> {
+  const report: StockImportReport = { applied: false, changes: [], problems: [] };
   try {
     const user = await requireRole("admin");
-    const keys = ["freeShippingAbove", "slab1UptoG", "slab1Price", "slab2UptoG", "slab2Price", "extraPer500g", "codEnabled", "codMaxOrder", "codFee", "giftWrap", "reservationMinutes"];
-    const parsed = settingsSchema.safeParse(Object.fromEntries(keys.map((k) => [k, str(fd, k)])));
-    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form.", fieldErrors: fieldErrors(parsed.error) };
-    const s = parsed.data;
+    const why = reason.trim();
+    if (why.length < 3) return { ...report, error: "Give a reason (e.g. Stocktake 31 Oct)." };
+    const rows = csvRecords(text);
+    if (!rows.length) return { ...report, error: "The file has no rows." };
+    if (!("sku" in rows[0]!) || !("count" in rows[0]! || "delta" in rows[0]!)) return { ...report, error: "Columns needed: sku, and count (stocktake) or delta (+/−)." };
+    if (rows.length > 2000) return { ...report, error: "Up to 2,000 rows per import." };
     await db();
-    await Settings.updateOne(
-      { _id: "store" },
-      {
-        $set: {
-          freeShippingAboveP: rupeesToPaise(s.freeShippingAbove),
-          shippingSlabs: [
-            { uptoG: s.slab1UptoG, priceP: rupeesToPaise(s.slab1Price) },
-            { uptoG: s.slab2UptoG, priceP: rupeesToPaise(s.slab2Price) },
-          ],
-          extraPer500gP: rupeesToPaise(s.extraPer500g),
-          codEnabled: s.codEnabled,
-          codMaxOrderP: rupeesToPaise(s.codMaxOrder),
-          codFeeP: rupeesToPaise(s.codFee),
-          giftWrapP: rupeesToPaise(s.giftWrap),
-          reservationMinutes: s.reservationMinutes,
-        },
-      },
-      { upsert: true },
-    );
-    await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "settings.update", entity: { kind: "settings", id: "store" } });
-    revalidatePath("/admin/settings");
-    return { ok: true, message: "Settings saved. New checkouts use them immediately." };
+    const products = await Product.find({ "variants.sku": { $in: rows.map((r) => (r.sku ?? "").toUpperCase()) } }).select("slug variants.sku variants.stock").lean();
+    const where = new Map(products.flatMap((p) => p.variants.map((v) => [v.sku, { productId: String(p._id), slug: p.slug, stock: v.stock }] as const)));
+    for (const r of rows) {
+      const sku = (r.sku ?? "").toUpperCase();
+      const hit = where.get(sku);
+      if (!hit) {
+        report.problems.push(`${sku || "(blank)"}: unknown SKU`);
+        continue;
+      }
+      const n = Number((r.count || r.delta || "").replace(/[\s,]/g, ""));
+      if (!Number.isInteger(n)) {
+        report.problems.push(`${sku}: not a whole number`);
+        continue;
+      }
+      const delta = r.count !== undefined && r.count !== "" ? n - hit.stock : n;
+      if (hit.stock + delta < 0) report.problems.push(`${sku}: would go below zero`);
+      else if (delta !== 0) report.changes.push({ sku, from: hit.stock, to: hit.stock + delta, delta });
+    }
+    if (apply && report.problems.length === 0) {
+      const actor = { name: user.name, role: user.role, userId: user.id };
+      for (const c of report.changes) await adjust({ productId: where.get(c.sku)!.productId, sku: c.sku, qty: Math.abs(c.delta), delta: c.delta }, why, actor);
+      revalidateProducts(report.changes.map((c) => where.get(c.sku)!.slug));
+      revalidatePath("/admin/inventory");
+      report.applied = true;
+    }
+    return report;
   } catch (e) {
-    return toFormError(e, "save_settings");
+    return { ...report, error: toFormError(e, "import_stock").error };
   }
 }

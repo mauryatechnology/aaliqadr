@@ -130,7 +130,7 @@ export function VariantsEditor({
 
       {/* Matrix */}
       <div className="overflow-x-auto rounded-lg border border-neutral-200">
-        <table className="w-full min-w-[1000px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
               <th className="px-3 py-2">Variant</th>
@@ -166,11 +166,11 @@ export function VariantsEditor({
                           ))}
                         </div>
                       ) : (
-                        <input aria-label="Variant label" className={`${inputCls} w-36`} value={v.label} onChange={(e) => setRow(i, { label: e.target.value })} />
+                        <input aria-label="Variant label" className={`${inputCls} w-28`} value={v.label} onChange={(e) => setRow(i, { label: e.target.value })} />
                       )}
                     </td>
                     <td className="px-2 py-2">
-                      <input aria-label="SKU" className={`${inputCls} w-40 font-mono text-xs uppercase`} value={v.sku} disabled={v.existing} title={v.existing ? "SKUs can't change once saved (orders and stock refer to them)" : undefined} onChange={(e) => setRow(i, { sku: e.target.value.toUpperCase() })} />
+                      <input aria-label="SKU" className={`${inputCls} w-36 font-mono text-xs uppercase`} value={v.sku} disabled={v.existing} title={v.existing ? "SKUs can't change once saved (orders and stock refer to them)" : undefined} onChange={(e) => setRow(i, { sku: e.target.value.toUpperCase() })} />
                       {!v.existing && (
                         <button type="button" className="mt-1 inline-flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-900" onClick={() => setRow(i, { sku: suggestSku(code, v.optionValues) })}>
                           <Wand2 className="size-3" /> Auto

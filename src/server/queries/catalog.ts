@@ -67,17 +67,28 @@ export function fromDoc(d: LeanProduct): ProductDTO {
       codAllowed: v.codAllowed ?? true,
       maxPerOrder: v.maxPerOrder ?? 5,
     })),
-    media: (d.media ?? []).map((m, i) => ({
-      id: m.id ?? `m${i}`,
-      kind: (m.kind ?? "image") as "image" | "video",
-      url: m.url,
-      posterUrl: m.posterUrl ?? undefined,
-      alt: m.alt,
-      width: m.width,
-      height: m.height,
-      blurDataURL: m.blurDataURL ?? undefined,
-      role: (m.role ?? undefined) as ProductDTO["media"][number]["role"],
-    })),
+    media: (d.media && d.media.length > 0)
+      ? d.media.map((m, i) => ({
+          id: m.id ?? `m${i}`,
+          kind: (m.kind ?? "image") as "image" | "video",
+          url: m.url,
+          posterUrl: m.posterUrl ?? undefined,
+          alt: m.alt,
+          width: m.width,
+          height: m.height,
+          blurDataURL: m.blurDataURL ?? undefined,
+          role: (m.role ?? undefined) as ProductDTO["media"][number]["role"],
+        }))
+      : [
+          {
+            id: `bottle-${d.zodiacSign ?? "brand"}`,
+            kind: "image" as const,
+            url: `/bottles/${d.zodiacSign ?? "brand"}.svg`,
+            alt: `${d.name} perfume bottle artwork`,
+            width: 720,
+            height: 1290,
+          },
+        ],
     legal: {
       manufacturer: d.legal?.manufacturer ?? "",
       countryOfOrigin: d.legal?.countryOfOrigin ?? "India",

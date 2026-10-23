@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HomeBanners } from "@/components/content/HomeBanners";
 import Image from "next/image";
 import Link from "next/link";
 import { cacheLife } from "next/cache";
@@ -84,6 +85,7 @@ export default function HomePage() {
     <>
       <Hero />
       <SeasonSpotlight />
+      <HomeBanners />
       <Signatures />
       <Elements />
       <Coffret />
@@ -101,8 +103,36 @@ function Hero() {
   return (
     <PointerDepth className="grain vignette relative isolate overflow-clip">
       <Depth strength={-26} className="absolute inset-0 -z-10">
-        <div aria-hidden className="aurora" />
+        <div aria-hidden className="aurora opacity-75" />
       </Depth>
+
+      {/* Radiant celestial ambient light effects */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        {/* Luminous warm golden aura behind the zodiac wheel */}
+        <div
+          className="animate-celestial-glow absolute -right-[8%] top-1/2 -translate-y-1/2 h-[720px] w-[720px] rounded-full blur-[90px]"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(196,160,68,0.3) 0%, rgba(212,175,55,0.14) 38%, transparent 70%)",
+          }}
+        />
+        {/* Soft amber illumination behind the headline */}
+        <div
+          className="absolute -left-[6%] top-[20%] h-[550px] w-[550px] rounded-full blur-[100px] opacity-70"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(196,160,68,0.2) 0%, rgba(160,120,40,0.06) 50%, transparent 75%)",
+          }}
+        />
+        {/* Central divine light bloom */}
+        <div
+          className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[950px] blur-[120px] opacity-40"
+          style={{
+            background: "radial-gradient(ellipse at center, rgba(196,160,68,0.22) 0%, transparent 65%)",
+          }}
+        />
+      </div>
+
       <div className="mx-auto grid min-h-[calc(100dvh-5rem)] max-w-[1360px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:py-10">
         <Parallax speed={-0.18}>
           <Depth strength={6} className="flex flex-col items-start gap-7">

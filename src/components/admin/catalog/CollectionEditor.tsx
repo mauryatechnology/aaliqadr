@@ -103,7 +103,7 @@ export function CollectionEditor({ initial, products, categories, isNew }: { ini
           <FieldLabel label="Sort order"><input type="number" min={0} className={inputCls} value={c.sortOrder} onChange={(e) => set("sortOrder", Number(e.target.value) || 0)} /></FieldLabel>
           <div className="flex flex-col gap-3 pt-6">
             <Switch checked={c.isActive} onChange={(v) => set("isActive", v)} label="Visible in store" />
-            <Switch checked={c.featured} onChange={(v) => set("featured", v)} label="Featured" hint="Shown on the home page and in the menu." />
+            <Switch checked={c.featured} onChange={(v) => set("featured", v)} label="Featured" hint="Listed first on the Collections page." />
           </div>
         </div>
       </Card>

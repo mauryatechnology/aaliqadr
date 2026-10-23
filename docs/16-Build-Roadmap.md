@@ -58,16 +58,20 @@ The estimates assume **one senior full-stack developer plus one designer** (part
 
 ## Phase 4: Engagement, content & compliance (week 8)
 
-- [ ] Reviews (verified, photo, moderation, aggregate update)
-- [ ] Returns/damage claims with video evidence
+- [x] Reviews: verified purchase, photos, moderation queue, public replies, aggregate rating
+- [x] Damage/leak/wrong-item claims with photo/video evidence, claim window, approve → refund (Razorpay or recorded COD refund) / replacement, emails
 - [~] Coupons admin, gift options and packing slip done; automatic offers pending
-- [ ] CMS: home builder, sign copy, FAQs, policies (versioned), journal
+- [~] CMS: announcement bar, home banners, FAQs (/faq), policies (versioned, append-only history) done; home builder, sign copy and journal pending
 - [ ] Newsletter double opt-in; consent ledger; privacy centre (export/delete)
 - [ ] Back-in-stock alerts; cron jobs complete
 - [ ] Cookie consent + GA4/Meta (consent mode)
 - [ ] Legal Metrology fields enforced on publish; grievance page
 
 **Exit:** Feature complete for v1.
+
+## Catalogue & admin expansion (FlexSell parity, B2C only) — done
+
+See docs/17. Categories (tree), collections (manual + smart rules), HSN master, product options (up to two axes) with per-variant images, gallery with zoom/video, A+ content, specifications, rich descriptions, product list with filters/bulk actions/duplicate/delete-or-archive, CSV import/export (products and stock), category and collection pages, shop filters/sort, reviews, claims, customer detail, staff invites and role matrix, shipping page, invoice register, sales & GST reports, activity log.
 
 ## Phase 5: Hardening & launch (weeks 9–10)
 
