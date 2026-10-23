@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+!.env.example
+
+# brand source files (heavy CDR/PSD masters; web exports live in public/brand)
+/Aaliqadr/
+/Aaliqadr.zip
