@@ -94,8 +94,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${cormorant.variable} ${cinzel.variable} ${manrope.variable} antialiased`}>
-      <body className="flex min-h-dvh flex-col">
+    <html lang="en-IN" className={`${cormorant.variable} ${cinzel.variable} ${manrope.variable} antialiased`} suppressHydrationWarning>
+      <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
         {children}
         {/* Vercel serves these scripts only on its deployments; locally they just log load errors. */}
         {env.NODE_ENV === "production" && (

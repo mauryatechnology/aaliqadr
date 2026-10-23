@@ -14,7 +14,8 @@ export function SmoothScroll() {
 
     const fine = window.matchMedia("(pointer: fine)").matches;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!fine || reduce || lowEnd) return;
+    const isMobile = window.innerWidth < 768 || window.matchMedia("(pointer: coarse)").matches;
+    if (!fine || reduce || lowEnd || isMobile) return;
 
     let raf = 0;
     let destroy: (() => void) | undefined;

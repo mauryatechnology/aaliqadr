@@ -198,7 +198,7 @@ async function Signatures() {
           </p>
         </Parallax>
       </Reveal>
-      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {cards.map((p, i) => (
           <li key={p.id}>
             <ProductCard product={p} priority={i < 2} />
@@ -215,9 +215,9 @@ function Elements() {
     <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
       <Reveal className="mb-10 flex flex-col gap-3">
         <p className="eyebrow">Shop by element</p>
-        <h2 className="font-display text-4xl">Fire, Earth, Air, Water</h2>
+        <h2 className="font-display text-3xl sm:text-4xl">Fire, Earth, Air, Water</h2>
       </Reveal>
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {ELEMENTS.map((el, i) => {
           const info = ELEMENT_INFO[el];
           return (
@@ -226,19 +226,19 @@ function Elements() {
                 href={`/shop?element=${el}`}
                 data-zodiac={ambient[el]}
                 data-element={el}
-                className="surface group relative flex min-h-56 flex-col justify-end gap-2 overflow-clip p-6"
+                className="surface group relative flex min-h-40 flex-col justify-end gap-1.5 overflow-clip p-4 sm:min-h-56 sm:gap-2 sm:p-6"
               >
                 <div
                   aria-hidden
                   className="absolute inset-0 -z-10 opacity-70 transition-opacity duration-700 group-hover:opacity-100"
                   style={{ background: "radial-gradient(90% 80% at 80% 0%, var(--z-g2), transparent 70%)" }}
                 />
-                <span className="flex gap-2 text-2xl" style={{ color: "var(--z-primary)" }} aria-hidden>
+                <span className="flex gap-1 text-lg sm:gap-2 sm:text-2xl" style={{ color: "var(--z-primary)" }} aria-hidden>
                   {info.signs.map((s) => `${ZODIAC[s].glyph}︎`).join(" ")}
                 </span>
-                <h3 className="font-display text-3xl">{info.label}</h3>
-                <p className="text-muted text-sm">{info.scent}</p>
-                <span className="text-accent mt-2 inline-flex items-center gap-1 text-xs tracking-[0.2em] uppercase">
+                <h3 className="font-display text-xl sm:text-3xl">{info.label}</h3>
+                <p className="line-clamp-2 text-xs text-muted sm:text-sm">{info.scent}</p>
+                <span className="text-accent mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] sm:mt-2 sm:text-xs">
                   Shop {info.label.toLowerCase()} <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
                 </span>
               </Link>

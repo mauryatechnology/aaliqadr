@@ -288,6 +288,14 @@
     transform: none;
     filter: none;
   }
+  @media (max-width: 768px) {
+    [data-reveal] {
+      filter: none;
+      transition:
+        opacity 0.5s var(--ease-lux) var(--reveal-delay, 0s),
+        transform 0.5s var(--ease-lux) var(--reveal-delay, 0s);
+    }
+  }
 }
 
 /* ── Parallax (components/motion/Parallax, layout/CelestialBackdrop) ─────────────────────
@@ -376,6 +384,22 @@ html[data-perf="lite"] .twinkle {
   .surface { backdrop-filter: none; background: var(--color-surface); }
 }
 html[data-perf="lite"] .surface { backdrop-filter: none; background: var(--color-surface); }
+
+/* Mobile screens: drop heavy live backdrop blur, SVG noise filters & aurora animations for fast 60/120fps scrolling */
+@media (max-width: 768px) {
+  .surface {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: color-mix(in oklab, var(--color-surface) 92%, transparent);
+  }
+  .grain::after {
+    display: none !important;
+  }
+  .aurora {
+    animation: none !important;
+    filter: blur(20px) !important;
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

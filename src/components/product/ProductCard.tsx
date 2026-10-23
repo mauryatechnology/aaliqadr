@@ -25,7 +25,7 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
             src={image.url}
             alt={image.alt}
             fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 45vw, 90vw"
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 50vw"
             className="object-cover transition-transform duration-700 ease-lux group-hover:scale-105"
             placeholder={image.blurDataURL ? "blur" : "empty"}
             blurDataURL={image.blurDataURL}
@@ -33,22 +33,26 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
             loading={priority ? "eager" : "lazy"}
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center p-10 transition-transform duration-700 ease-lux group-hover:scale-105">
-            <BottleArt sign={sign?.slug} preload={priority} className="max-h-full w-auto drop-shadow-[0_20px_40px_rgba(0,0,0,.45)]" />
+          <div className="absolute inset-0 grid place-items-center p-4 transition-transform duration-700 ease-lux group-hover:scale-105 sm:p-8">
+            <BottleArt sign={sign?.slug} preload={priority} className="max-h-full w-auto drop-shadow-[0_15px_30px_rgba(0,0,0,.45)]" />
           </div>
         )}
         {!product.inStock && (
-          <span className="absolute left-3 top-3 rounded-full bg-black/60 px-3 py-1 text-[10px] uppercase tracking-widest text-ivory">Sold out</span>
+          <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-widest text-ivory sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[10px]">
+            Sold out
+          </span>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-5">
-        <div className="flex items-center justify-between gap-2">
-          <span className="eyebrow !text-[0.62rem]">{sign ? `${sign.name} · ${sign.rashi}` : product.type === "bundle" ? "All twelve signs" : "Gift set"}</span>
-          {sign && <Glyph sign={sign.slug} className="text-lg text-primary" label={false} />}
+      <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-5">
+        <div className="flex items-center justify-between gap-1.5">
+          <span className="eyebrow truncate !text-[0.55rem] sm:!text-[0.62rem]">
+            {sign ? `${sign.name} · ${sign.rashi}` : product.type === "bundle" ? "All twelve signs" : "Gift set"}
+          </span>
+          {sign && <Glyph sign={sign.slug} className="shrink-0 text-sm text-primary sm:text-lg" label={false} />}
         </div>
-        <h3 className="font-display text-2xl leading-tight">{product.name}</h3>
-        <p className="line-clamp-2 text-sm text-muted">{product.tagline}</p>
-        <Price priceP={product.fromPriceP} mrpP={product.fromMrpP} from className="mt-auto pt-2" />
+        <h3 className="font-display line-clamp-1 text-base leading-tight sm:line-clamp-none sm:text-2xl">{product.name}</h3>
+        <p className="line-clamp-1 text-xs text-muted sm:line-clamp-2 sm:text-sm">{product.tagline}</p>
+        <Price priceP={product.fromPriceP} mrpP={product.fromMrpP} from className="mt-auto pt-1 text-xs sm:pt-2 sm:text-base" />
       </div>
     </Link>
   );

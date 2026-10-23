@@ -383,7 +383,7 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
             <p className="eyebrow">Pairs well with</p>
             <h2 className="font-display text-4xl">Compatible signs</h2>
           </Reveal>
-          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {related.map((r) => (
               <li key={r.id}>
                 <ProductCard product={r} />

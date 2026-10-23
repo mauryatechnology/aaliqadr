@@ -56,7 +56,7 @@ export default function ZodiacIndexPage() {
                 </h2>
                 <p className="text-muted text-sm">{info.scent}</p>
               </Reveal>
-              <ul className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
                 {info.signs.map((slug, i) => {
                   const s = ZODIAC[slug];
                   return (
@@ -66,7 +66,7 @@ export default function ZodiacIndexPage() {
                           href={routes.sign(slug)}
                           data-zodiac={slug}
                           data-element={el}
-                          className="surface group relative flex min-h-64 flex-col justify-between gap-6 overflow-clip p-7"
+                          className="surface group relative flex min-h-48 flex-col justify-between gap-4 overflow-clip p-4 sm:min-h-64 sm:gap-6 sm:p-7"
                         >
                           <div
                             aria-hidden
@@ -75,19 +75,19 @@ export default function ZodiacIndexPage() {
                           />
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="eyebrow">{s.rashi}</p>
-                              <h3 className="font-display mt-2 text-4xl">{s.name}</h3>
-                              <p className="text-muted mt-1 text-xs">{formatSignDates(s)}</p>
+                              <p className="eyebrow !text-[0.6rem] sm:!text-[0.72rem]">{s.rashi}</p>
+                              <h3 className="font-display mt-1 text-2xl sm:mt-2 sm:text-4xl">{s.name}</h3>
+                              <p className="text-muted mt-1 text-[10px] sm:text-xs">{formatSignDates(s)}</p>
                             </div>
                             <Glyph
                               sign={slug}
                               label={false}
-                              className="ease-lux text-5xl transition-transform duration-700 group-hover:rotate-12"
+                              className="ease-lux text-3xl transition-transform duration-700 group-hover:rotate-12 sm:text-5xl"
                             />
                           </div>
                           <div>
-                            <p className="text-muted text-sm">Signature</p>
-                            <p className="font-display text-2xl" style={{ color: "var(--z-primary)" }}>
+                            <p className="text-muted text-xs sm:text-sm">Signature</p>
+                            <p className="font-display text-base sm:text-2xl" style={{ color: "var(--z-primary)" }}>
                               {s.fragrance.name}
                             </p>
                           </div>

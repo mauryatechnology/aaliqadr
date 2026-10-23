@@ -165,7 +165,7 @@ export default async function SignPage({ params }: PageProps<"/zodiac/[sign]">) 
             <h2 className="font-display text-4xl">Signs that complete {s.name}</h2>
             <p className="text-muted max-w-xl">Gift a duo, or layer two signatures for a scent that is entirely yours.</p>
           </Reveal>
-          <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
             {compatible.map((p) => (
               <li key={p.id}>
                 <ProductCard product={p} />

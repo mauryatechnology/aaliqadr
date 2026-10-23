@@ -14,6 +14,8 @@ export function ParallaxRuntime() {
     if (CSS.supports("animation-timeline: view()")) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (document.documentElement.dataset.perf === "lite") return;
+    // On mobile and touch screens, skip JS parallax to eliminate layout thrashing and keep 60/120fps native scroll.
+    if (window.innerWidth < 768 || window.matchMedia("(pointer: coarse)").matches) return;
 
     let frame = 0;
     const update = () => {

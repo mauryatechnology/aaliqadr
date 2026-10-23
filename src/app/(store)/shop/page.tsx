@@ -76,7 +76,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/shop">["sea
       <p className="mb-6 text-sm text-muted" aria-live="polite">
         {items.length} {items.length === 1 ? "fragrance" : "fragrances"}
       </p>
-      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
         {items.map((p, i) => (
           <li key={p.id}>
             <ProductCard product={p} priority={i < 4} />
@@ -106,7 +106,7 @@ async function Results({ searchParams }: { searchParams: PageProps<"/shop">["sea
 
 function GridSkeleton() {
   return (
-    <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4" aria-hidden>
+    <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4" aria-hidden>
       {Array.from({ length: 8 }, (_, i) => (
         <li key={i} className="surface aspect-[4/6] animate-pulse" />
       ))}
