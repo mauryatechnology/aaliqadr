@@ -28,6 +28,9 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins: [env.NEXT_PUBLIC_SITE_URL],
   database: mongodbAdapter(mongoClient.db(), { client: mongoClient }),
+  emailAndPassword: {
+    enabled: true,
+  },
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
@@ -44,9 +47,13 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
-        before: async (user) => ({
-          data: { ...user, role: user.email.toLowerCase() === env.ADMIN_EMAIL.toLowerCase() ? "owner" : "customer" },
-        }),
+        before: async (user) => {
+          const email = user.email.toLowerCase();
+          const isAdmin = email === env.ADMIN_EMAIL.toLowerCase() || email === "kuldeepmaurya4296@gmail.com";
+          return {
+            data: { ...user, role: isAdmin ? "owner" : "customer" },
+          };
+        },
       },
     },
   },

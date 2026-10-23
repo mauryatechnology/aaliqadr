@@ -3,22 +3,39 @@
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useId, useState, useTransition } from "react";
-import { ArrowLeft, Loader2, Mail } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, Mail } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
-/** Passwordless sign-in: email → 6-digit code, or Google (docs/06 §2). */
+/** Sign-in: email password or 6-digit OTP code, or Google (docs/06 §2). */
 export function LoginForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const router = useRouter();
   const emailId = useId();
+  const passwordId = useId();
   const codeId = useId();
+  const [authMode, setAuthMode] = useState<"password" | "otp">(next.includes("/admin") ? "password" : "password");
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/account";
+
+  function loginWithPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    start(async () => {
+      const { error } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
+      });
+      if (error) return setError(error.message ?? "Invalid email or password.");
+      router.replace(safeNext as Route);
+      router.refresh();
+    });
+  }
 
   function sendCode(e?: React.FormEvent) {
     e?.preventDefault();
@@ -52,7 +69,80 @@ export function LoginForm({ next, googleEnabled }: { next: string; googleEnabled
 
   return (
     <div className="surface flex flex-col gap-6 p-7 sm:p-9">
-      {step === "email" ? (
+      {/* Auth mode switcher */}
+      <div className="grid grid-cols-2 rounded-xl bg-white/5 p-1 text-xs font-medium uppercase tracking-[0.16em]">
+        <button
+          type="button"
+          onClick={() => {
+            setAuthMode("password");
+            setError(null);
+            setInfo(null);
+          }}
+          className={`flex h-9 items-center justify-center gap-1.5 rounded-lg transition-colors ${
+            authMode === "password" ? "bg-gold text-obsidian font-semibold" : "text-muted hover:text-fg"
+          }`}
+        >
+          <KeyRound className="size-3.5" /> Password
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setAuthMode("otp");
+            setError(null);
+            setInfo(null);
+          }}
+          className={`flex h-9 items-center justify-center gap-1.5 rounded-lg transition-colors ${
+            authMode === "otp" ? "bg-gold text-obsidian font-semibold" : "text-muted hover:text-fg"
+          }`}
+        >
+          <Mail className="size-3.5" /> Email Code
+        </button>
+      </div>
+
+      {authMode === "password" ? (
+        <form onSubmit={loginWithPassword} className="flex flex-col gap-4" noValidate>
+          <div className="flex flex-col gap-2">
+            <label htmlFor={emailId} className="text-sm font-medium">
+              Email address
+            </label>
+            <input
+              id={emailId}
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="h-13 rounded-xl border border-white/15 bg-black/30 px-4 text-base text-fg placeholder:text-muted/70 focus:border-gold focus:outline-none"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label htmlFor={passwordId} className="text-sm font-medium">
+              Password
+            </label>
+            <input
+              id={passwordId}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="h-13 rounded-xl border border-white/15 bg-black/30 px-4 text-base text-fg placeholder:text-muted/70 focus:border-gold focus:outline-none"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={pending || !email.includes("@") || !password}
+            className="flex h-13 items-center justify-center gap-2 rounded-full bg-gold font-caps text-xs uppercase tracking-[0.22em] text-obsidian transition-opacity disabled:opacity-50"
+          >
+            {pending ? <Loader2 className="size-4 animate-spin" /> : <KeyRound className="size-4" />} Sign in
+          </button>
+        </form>
+      ) : step === "email" ? (
         <form onSubmit={sendCode} className="flex flex-col gap-4" noValidate>
           <label htmlFor={emailId} className="text-sm font-medium">
             Email address
