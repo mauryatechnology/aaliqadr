@@ -4,21 +4,23 @@ import { PageHero } from "@/components/layout/PageHero";
 import { breadcrumbLd, faqLd, JsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
-  title: "Find Your Zodiac Sign & Perfume Match | Birth Date & Rashi Calculator",
+  title: "Find Your Zodiac Sign & Perfume Match | Vedic Moon Sign & Sun Sign Calculator",
   description:
-    "Discover your signature scent in seconds. Enter your birth date or Vedic rashi to reveal the luxury Extrait de Parfum crafted for your astrological element and ruling planet.",
+    "Discover your signature scent with high astronomical precision. Enter your birth date, time, and city to calculate your Vedic Moon Sign (Chandra Rashi), Nakshatra, and Pada, or explore your Western Sun sign.",
   keywords: [
     "find my zodiac perfume",
-    "rashi perfume calculator",
+    "vedic moon sign calculator",
+    "chandra rashi perfume finder",
+    "nakshatra fragrance finder",
     "astrology fragrance finder",
     "perfume for my birth date",
     "zodiac scent quiz",
-    "rashi ke mutabiq perfume",
+    "luxury astrological perfumes",
   ],
   alternates: { canonical: "/find-my-sign" },
   openGraph: {
     title: "Find Your Zodiac Sign & Perfume Match | Aaliqadr",
-    description: "Enter your birth date or rashi to find the Extrait de Parfum written in your stars.",
+    description: "Calculate your Vedic Moon Sign (Chandra Rashi) or Western Sun Sign to reveal your signature Extrait de Parfum.",
     url: "/find-my-sign",
     type: "website",
   },
@@ -26,26 +28,35 @@ export const metadata: Metadata = {
 
 const FINDER_FAQS = [
   {
-    question: "How does the Aaliqadr Zodiac Perfume Finder work?",
+    question: "What is the difference between Vedic Moon Sign and Western Sun Sign?",
     answer:
-      "Our calculator matches your solar birth date to its tropical zodiac sign and corresponding Vedic rashi. Each sign is mapped to its classical elemental group (Fire, Earth, Air, Water) and ruling planet, identifying your bespoke Extrait de Parfum signature.",
+      "Western astrology determines your zodiac sign by the position of the Sun on your birth date. In Indian Vedic astrology (Jyotish), your primary sign is your Moon Sign (Chandra Rashi), calculated from the exact position of the Moon at your birth time. Since the Moon changes constellations every 2.25 days, the Vedic Moon sign offers deeper emotional and spiritual alignment.",
   },
   {
-    question: "Can I find my fragrance using my Indian Vedic Chandra Rashi?",
+    question: "How does the Aaliqadr Vedic Moon Sign calculator work?",
     answer:
-      "Yes! You can either enter your calendar birth date or pick your Vedic Rashi (Mesh, Vrishabha, Mithun, Kark, Simha, Kanya, Tula, Vrishchik, Dhanu, Makar, Kumbh, Meen) directly from the zodiac selector.",
+      "Our calculator uses 35-term astronomical lunar ephemeris equations combined with the standard Lahiri (Chitra Paksha) Ayanamsa. By calculating your exact Julian Day and planetary perturbation factors, it determines your Chandra Rashi, Janam Nakshatra (1 of 27), Pada (1 of 4), and constitutional attributes.",
   },
   {
-    question: "Is my birth date stored or tracked when I use this tool?",
+    question: "Why should I verify system-generated astrological calculations with an astrologer?",
     answer:
-      "No. The calculation runs entirely in your local browser. No personal birth details or dates are sent to or stored on our servers.",
+      "System-generated calculations use mathematical algorithms that approximate planetary positions. Variations in exact birth timing (even a few minutes on cusp dates), geographical latitude/longitude adjustments, and different ayanamsa systems (Lahiri, Raman, KP) can result in differences. We always recommend confirming with your personal astrologer or panditji for formal horoscope readings.",
+  },
+  {
+    question: "Is my birth date or time stored or tracked when I use this tool?",
+    answer:
+      "No. The entire calculation executes purely inside your local browser. No personal birth details, dates, times, or cities are recorded, transmitted, or stored on our servers.",
   },
 ];
 
 export default function FindMySignPage() {
   return (
     <>
-      <PageHero eyebrow="Find my sign" title="Which fragrance is written for you?" align="center" />
+      <PageHero
+        eyebrow="Find Your Sign · Astrological Match"
+        title="Which fragrance is written for you?"
+        align="center"
+      />
       <div className="mx-auto max-w-5xl px-4 pb-24 sm:px-6">
         <SignFinder />
       </div>
