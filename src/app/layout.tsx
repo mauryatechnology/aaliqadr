@@ -1,14 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Cinzel, Cormorant_Garamond, Manrope } from "next/font/google";
+import { Cinzel, Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { site } from "@/config/site";
 import { env } from "@/env";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["400", "500", "600"], style: ["normal", "italic"], variable: "--font-cormorant", display: "swap" });
-const cinzel = Cinzel({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-cinzel", display: "swap" });
-const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope", display: "swap" });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+const cinzel = Cinzel({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-cinzel",
+  display: "swap",
+});
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -94,7 +110,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en-IN" className={`${cormorant.variable} ${cinzel.variable} ${manrope.variable} antialiased`} suppressHydrationWarning>
+    <html lang="en-IN" className={`${playfair.variable} ${cinzel.variable} ${jakarta.variable} antialiased`} suppressHydrationWarning>
       <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
         {children}
         {/* Vercel serves these scripts only on its deployments; locally they just log load errors. */}

@@ -4,12 +4,19 @@ function Meter({ label, value, caption }: { label: string; value: number; captio
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between text-sm">
-        <span className="text-fg">{label}</span>
-        <span className="text-muted">{caption}</span>
+        <span className="text-ivory font-medium">{label}</span>
+        <span className="text-gold-light font-medium text-xs sm:text-sm">{caption}</span>
       </div>
       <div className="flex gap-1" role="meter" aria-label={label} aria-valuemin={1} aria-valuemax={5} aria-valuenow={value}>
         {Array.from({ length: 5 }, (_, i) => (
-          <span key={i} className="h-1.5 flex-1 rounded-full" style={{ background: i < value ? "var(--z-primary)" : "color-mix(in oklab, var(--z-text) 14%, transparent)" }} />
+          <span
+            key={i}
+            className="h-2 flex-1 rounded-full transition-colors"
+            style={{
+              background: i < value ? "var(--z-primary)" : "rgba(255, 255, 255, 0.16)",
+              boxShadow: i < value ? "0 0 8px var(--z-primary)" : "none",
+            }}
+          />
         ))}
       </div>
     </div>

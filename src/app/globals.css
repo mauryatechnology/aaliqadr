@@ -31,9 +31,9 @@
 @property --z-glow { syntax: "<color>"; inherits: true; initial-value: #c4a044; }
 
 @theme inline {
-  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
   --font-caps: var(--font-cinzel), "Cinzel", Georgia, serif;
-  --font-sans: var(--font-manrope), system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
 
   --color-gold: #c4a044;
   --color-gold-light: #e8cf8a;

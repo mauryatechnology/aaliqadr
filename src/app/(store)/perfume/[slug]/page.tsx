@@ -38,9 +38,12 @@ export async function generateStaticParams() {
   return [...slugs].map((slug) => ({ slug }));
 }
 
-/** Fragrances use their sign; element trios borrow their element's first sign; bundles stay on brand. */
-function themeSignFor(p: ProductDTO): ZodiacSlug | undefined {
-  return p.zodiacSign ?? (p.element ? ELEMENT_INFO[p.element].signs[0] : undefined);
+/** Fragrances use their sign; element trios borrow their element's first sign; bundles stay on zodiac wheel start (Aries). */
+function themeSignFor(p: ProductDTO): ZodiacSlug {
+  if (p.zodiacSign) return p.zodiacSign;
+  const firstSign = p.element ? ELEMENT_INFO[p.element]?.signs[0] : undefined;
+  if (firstSign) return firstSign;
+  return "aries";
 }
 
 export async function generateMetadata({ params }: PageProps<"/perfume/[slug]">): Promise<Metadata> {
@@ -187,12 +190,28 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
   const active = p.variants.filter((v) => v.isActive);
   const cover = p.media.find((m) => m.kind === "image");
 
+  const hasNotes = Boolean(
+    p.notes &&
+    p.display.notes &&
+    ((p.notes.top && p.notes.top.length > 0) ||
+     (p.notes.heart && p.notes.heart.length > 0) ||
+     (p.notes.base && p.notes.base.length > 0))
+  );
+
+  const hasProfile = Boolean(
+    p.profile &&
+    p.display.profile &&
+    (p.profile.intensity > 0 || (p.profile.longevityHours && p.profile.longevityHours[1] > 0))
+  );
+
+  const hasIncludes = Boolean(p.includes && p.includes.length > 0);
+
   const body = (
     <>
       <PointerDepth className="relative overflow-clip">
-        <Parallax speed={-0.5} className="absolute inset-x-0 -inset-y-32 -z-10">
+        <Parallax speed={-0.5} className="absolute inset-x-0 -inset-y-32 -z-10 [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]">
           <Depth strength={-20} className="absolute inset-0">
-            {themeSign ? <AmbientLayer sign={themeSign} intensity={0.6} /> : <div aria-hidden className="aurora" />}
+            <AmbientLayer sign={themeSign} intensity={0.6} />
           </Depth>
         </Parallax>
         <ProductStateProvider variants={p.variants}>
@@ -358,21 +377,53 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
         </ProductStateProvider>
       </PointerDepth>
 
-      {p.notes && p.display.notes && (
+      {hasNotes && (
         <section className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6">
           <Reveal className="mb-10 flex flex-col items-center gap-3">
-            <p className="eyebrow">Olfactive pyramid</p>
-            <h2 className="font-display text-4xl sm:text-5xl">How it unfolds</h2>
+            <p className="eyebrow text-gold-light/90 tracking-[0.26em]">Olfactive pyramid</p>
+            <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">How it unfolds</h2>
+            <p className="text-ivory/80 max-w-lg text-sm sm:text-base font-light">
+              Crafted in three unfolding tiers from first luminous spark to enduring skin scent.
+            </p>
           </Reveal>
-          <NotesPyramid notes={p.notes} />
-          {p.profile && p.display.profile && (
+          <NotesPyramid notes={p.notes!} />
+          {hasProfile && (
             <Reveal className="surface mt-12 p-6 text-left sm:p-8">
-              <ScentProfile profile={p.profile} />
-              <p className="text-muted mt-6 text-sm">
-                Best in {p.profile.season.join(" & ").toLowerCase()}, {p.profile.timeOfDay.join(" or ")}.
+              <ScentProfile profile={p.profile!} />
+              <p className="text-ivory/85 mt-6 text-sm font-light">
+                Best experienced in <span className="text-gold-light font-medium capitalize">{p.profile!.season.join(" & ").toLowerCase()}</span>, <span className="text-gold-light font-medium">{p.profile!.timeOfDay.join(" or ")}</span>.
               </p>
             </Reveal>
           )}
+        </section>
+      )}
+
+      {!hasNotes && hasIncludes && (
+        <section className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6">
+          <Reveal className="mb-12 flex flex-col items-center gap-3">
+            <p className="eyebrow text-gold-light/90 tracking-[0.26em]">The Discovery Collection</p>
+            <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">
+              {p.type === "bundle" ? "Twelve signatures to explore" : "Included in this set"}
+            </h2>
+            <p className="text-ivory/80 max-w-xl text-sm sm:text-base font-light">
+              {p.type === "bundle"
+                ? "Every zodiac Extrait de Parfum in generous 2 ml spray atomisers. Experience one rashi a day and let your skin decide."
+                : `${p.tagline}. Handcrafted luxury Extraits curated together.`}
+            </p>
+          </Reveal>
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+            {p.includes!.map((item) => (
+              <li
+                key={item.name}
+                className="surface group relative flex flex-col items-start gap-1 p-4 sm:p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-lg"
+              >
+                <span className="text-base sm:text-lg font-medium text-ivory group-hover:text-gold-light transition-colors">
+                  {item.name}
+                </span>
+                <span className="text-xs text-ivory/70 font-light">{item.detail}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -411,12 +462,10 @@ export default async function ProductPage({ params }: PageProps<"/perfume/[slug]
     </>
   );
 
-  return themeSign ? (
+  return (
     <ZodiacScope sign={themeSign} page>
       {body}
     </ZodiacScope>
-  ) : (
-    body
   );
 }
 
