@@ -1,0 +1,74 @@
+# Every push and pull request: secrets scan, lint, types, tests, production build, the
+# first-load JS budget, and a CSP regression test in a real browser (plan.md §13.1).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # Scans the files and the commits in this push / PR. History before the fix of
+      # plan.md S3 contains a rotated password; it is reported once in the allowlist note.
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 dir /repo --config /repo/.gitleaks.toml --redact --no-banner
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            RANGE="${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            RANGE="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          if [ "${RANGE#0000000}" != "$RANGE" ]; then RANGE="-1"; fi
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.21.2 git /repo --config /repo/.gitleaks.toml --redact --no-banner --log-opts="$RANGE"
+
+  build:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder configuration: the app runs in seed-catalogue mode, no secrets needed.
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: cp .env.example .env
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: First-load JS budget (170 KB gzip per page)
+        run: node scripts/ci/bundle-budget.mjs 170
+      - name: CSP regression (Find My Sign map + place search in a production build)
+        run: |
+          npx next start -p 3200 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://localhost:3200/ && break; sleep 1; done
+          E2E_BASE=http://localhost:3200 CHROME_PATH=$(which google-chrome || which chromium) node scripts/dev/finder-check.mjs
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=high

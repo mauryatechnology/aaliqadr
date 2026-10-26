@@ -17,14 +17,15 @@ interface ProductState {
 
 const Ctx = createContext<ProductState | null>(null);
 
-export function ProductStateProvider({ variants, children }: { variants: Variant[]; children: ReactNode }) {
+/** `syncUrl: false` keeps `?v=` out of the address bar (quick view on a listing). */
+export function ProductStateProvider({ variants, children, syncUrl = true }: { variants: Variant[]; children: ReactNode; syncUrl?: boolean }) {
   const active = variants.filter((v) => v.isActive);
   const fallback = (active.find((v) => v.stock > 0) ?? active[0])?.sku;
   const [sku, setSku] = useState(fallback);
 
   // Adopt ?v= after hydration (the static HTML always renders the default variant).
   useEffect(() => {
-    const wanted = new URLSearchParams(window.location.search).get("v")?.toUpperCase();
+    const wanted = syncUrl ? new URLSearchParams(window.location.search).get("v")?.toUpperCase() : undefined;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (wanted && wanted !== sku && active.some((v) => v.sku === wanted)) setSku(wanted);
     // Run once on mount.
@@ -33,6 +34,7 @@ export function ProductStateProvider({ variants, children }: { variants: Variant
 
   const select = (next: string) => {
     setSku(next);
+    if (!syncUrl) return;
     const url = new URL(window.location.href);
     url.searchParams.set("v", next);
     window.history.replaceState(window.history.state, "", url);

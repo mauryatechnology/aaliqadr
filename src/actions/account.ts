@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { customerCanCancel } from "@/lib/order-status";
-import { getSessionUser } from "@/server/auth";
+import { headers } from "next/headers";
+import { auth, getSessionUser } from "@/server/auth";
+import { isBreachedPassword, passwordProblem } from "@/server/auth-password";
+import { rateLimit, RateLimitError } from "@/server/rate-limit";
 import { getOrderForViewer } from "@/server/queries/account";
 import { cancelOrder, OrderError } from "@/server/services/orders";
 
@@ -27,5 +30,25 @@ export async function cancelMyOrderAction(raw: unknown): Promise<{ ok: true; ref
     if (e instanceof OrderError) return { ok: false, error: e.message };
     console.error(JSON.stringify({ evt: "cancel_my_order.failed", error: (e as Error).message }));
     return { ok: false, error: "We couldn't cancel this order. Please contact us." };
+  }
+}
+
+/** Sets a first password for an account created by email code or Google (plan.md §6.7). */
+export async function setMyPasswordAction(newPassword: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "Please sign in again." };
+  const problem = passwordProblem(newPassword);
+  if (problem) return { ok: false, error: problem };
+  try {
+    await rateLimit("login", `set:${user.id}`);
+    if (await isBreachedPassword(newPassword)) return { ok: false, error: "This password has appeared in a data breach. Please choose a different one." };
+    await auth.api.setPassword({ body: { newPassword }, headers: await headers() });
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof RateLimitError) return { ok: false, error: e.message };
+    const msg = (e as { body?: { code?: string } }).body?.code;
+    if (msg === "PASSWORD_ALREADY_SET") return { ok: false, error: "You already have a password; use Change password instead." };
+    console.error(JSON.stringify({ evt: "set_password.failed", error: (e as Error).message }));
+    return { ok: false, error: "We couldn't set your password. Please try again." };
   }
 }

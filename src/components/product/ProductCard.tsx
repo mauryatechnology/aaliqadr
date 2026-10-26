@@ -1,37 +1,36 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { ShoppingBag, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { ZODIAC } from "@/config/zodiac";
 import { BADGES, type ProductCardDTO } from "@/server/catalog/types";
 import { BottleArt } from "@/components/zodiac/BottleArt";
 import { Glyph } from "@/components/zodiac/Glyph";
 import { Price } from "./Price";
 import { routes } from "@/lib/routes";
-import { cart } from "@/lib/cart-store";
+import { QuickAdd } from "./QuickAdd";
+import { CardSwatches } from "./CardSwatches";
+import { WishlistButton } from "./WishlistButton";
+import { QuickViewButton } from "./QuickView";
 
-/** Each card carries its own sign theme, so a grid reads as twelve small atmospheres. */
+/**
+ * Each card carries its own sign theme, so a grid reads as twelve small atmospheres.
+ * A server component: the link covers media and text, and the quick-add island sits beside it
+ * (never a button inside a link; plan.md Q3, Q4).
+ */
 export function ProductCard({ product, priority = false }: { product: ProductCardDTO; priority?: boolean }) {
   const sign = product.zodiacSign ? ZODIAC[product.zodiacSign] : undefined;
   const image = product.media[0];
   const second = product.media[1];
-
-  function onQuickAdd(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!product.inStock || !product.defaultSku) return;
-    cart.add({ sku: product.defaultSku, slug: product.slug }, 1);
-  }
+  const left = product.quickVariants.reduce((n, v) => n + v.stock, 0);
 
   return (
-    <Link
-      href={routes.product(product.slug)}
+    <article
       data-zodiac={sign?.slug}
       data-element={sign?.element ?? product.element}
-      className="group surface sheen relative flex h-full flex-col overflow-hidden p-0 transition-transform duration-500 ease-lux hover:-translate-y-1 shadow-md hover:shadow-xl"
+      className="group surface sheen relative flex h-full flex-col overflow-hidden p-0 shadow-md transition-transform duration-500 ease-lux hover:-translate-y-1 hover:shadow-xl"
       style={{ viewTransitionName: `product-${product.slug}` }}
     >
+      <Link href={routes.product(product.slug)} className="flex h-full flex-col focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
       <div className="relative aspect-[4/5] overflow-hidden" style={{ background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 80%)" }}>
         {image ? (
           <Image
@@ -66,18 +65,6 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
           </span>
         )}
 
-        {/* 1-Click Quick Add Button */}
-        {product.inStock && product.defaultSku && (
-          <button
-            type="button"
-            onClick={onQuickAdd}
-            aria-label={`Quick add ${product.name} to bag`}
-            className="absolute bottom-2.5 right-2.5 z-10 grid size-8 place-items-center rounded-full bg-gold text-obsidian shadow-lg transition-all duration-300 hover:scale-115 hover:bg-gold-light active:scale-95 sm:size-9 sm:opacity-0 sm:group-hover:opacity-100"
-            title="Quick Add to Bag"
-          >
-            <ShoppingBag className="size-4" strokeWidth={2} />
-          </button>
-        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-5">
@@ -100,7 +87,15 @@ export function ProductCard({ product, priority = false }: { product: ProductCar
         )}
 
         <Price priceP={product.fromPriceP} mrpP={product.fromMrpP} from className="mt-auto pt-1 text-xs sm:pt-2 sm:text-base font-semibold" />
+        {product.inStock && left > 0 && left <= 3 && <span className="text-[11px] text-amber-300">Only {left} left</span>}
       </div>
-    </Link>
+      </Link>
+      <CardSwatches product={product} />
+      <div className="absolute right-2.5 top-2.5 z-20 flex flex-col gap-1.5">
+        <WishlistButton slug={product.slug} name={product.name} />
+        <QuickViewButton slug={product.slug} name={product.name} />
+      </div>
+      <QuickAdd product={product} />
+    </article>
   );
 }

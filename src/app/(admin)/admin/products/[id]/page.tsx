@@ -23,7 +23,7 @@ async function AdminProduct({ params, searchParams }: PageProps<"/admin/products
   if (!user) return <p className="text-sm text-neutral-600">Only admins can edit products.</p>;
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const isNew = id === "new";
-  const [lookups, found] = await Promise.all([getEditorLookups(), isNew ? null : getProductEditor(id)]);
+  const [lookups, found] = await Promise.all([getEditorLookups(), isNew ? null : getProductEditor(id, { withCost: user.role === "owner" })]);
   if (!isNew && !found) notFound();
 
   // A new product may be pre-filed into a category (from the Categories page).
@@ -38,7 +38,7 @@ async function AdminProduct({ params, searchParams }: PageProps<"/admin/products
         description={isNew ? "Add the basics, photos and variants. Save as a draft until it's ready." : undefined}
         actions={!isNew ? <Badge tone={STATUS_TONE[initial.status]}>{initial.status}</Badge> : undefined}
       />
-      <ProductEditor key={initial.id ?? "new"} initial={initial} isNew={isNew} lookups={lookups} orderedSkus={found?.orderedSkus ?? []} />
+      <ProductEditor key={initial.id ?? "new"} initial={initial} isNew={isNew} lookups={lookups} showCost={user.role === "owner"} orderedSkus={found?.orderedSkus ?? []} draft={found?.draft ?? null} />
     </>
   );
 }

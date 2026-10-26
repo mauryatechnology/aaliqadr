@@ -40,6 +40,13 @@ const MediaSchema = new Schema(
     blurDataURL: String,
     kind: { type: String, enum: ["image", "video"], default: "image" },
     role: { type: String, enum: ["hero", "bottle", "box", "texture", "lifestyle"] },
+    scope: {
+      kind: { type: String, enum: ["shared", "variant", "option"], default: "shared" },
+      sku: String,
+      axis: Number,
+      value: String,
+    },
+    hash: String,
   },
   { _id: false },
 );
@@ -76,7 +83,8 @@ const ProductSchema = new Schema(
     options: { type: [OptionSchema], default: [] },
     specs: { type: [{ _id: false, label: String, value: String }], default: [] },
     aPlus: { type: [APlusSchema], default: [] },
-    display: { notes: { type: Boolean, default: true }, profile: { type: Boolean, default: true }, specs: { type: Boolean, default: true } },
+    display: { notes: { type: Boolean, default: true }, profile: { type: Boolean, default: true }, specs: { type: Boolean, default: true }, sharedAfterVariant: { type: Boolean, default: true } },
+    imageAxis: { type: Number, min: 0, max: 1 },
     story: String,
     zodiacSign: { type: String, enum: ZODIAC_SLUGS },
     element: { type: String, enum: ELEMENTS },
@@ -112,6 +120,8 @@ const ProductSchema = new Schema(
     salesCount: { type: Number, default: 0 },
     sortOrder: { type: Number, default: 0 },
     publishedAt: Date,
+    /** Launch / take-down times, applied by the catalogue cron (plan.md §8.5). */
+    schedule: { publishAt: Date, unpublishAt: Date },
   },
   { timestamps: true },
 );
@@ -123,6 +133,8 @@ ProductSchema.index({ status: 1, zodiacSign: 1 });
 ProductSchema.index({ status: 1, element: 1 });
 ProductSchema.index({ status: 1, salesCount: -1 });
 ProductSchema.index({ categoryId: 1, status: 1 });
+ProductSchema.index({ "schedule.publishAt": 1 }, { sparse: true });
+ProductSchema.index({ "schedule.unpublishAt": 1 }, { sparse: true });
 ProductSchema.index({ tags: 1 });
 
 export type ProductDoc = InferSchemaType<typeof ProductSchema>;

@@ -1,17 +1,30 @@
 import Link from "next/link";
-import type { Route } from "next";
 import { Suspense } from "react";
-import { Search } from "lucide-react";
-import { adminUser } from "@/server/admin/guard";
-import { listReturnsAdmin, RETURN_TABS, type ReturnTab } from "@/server/admin/ops";
-import { RETURN_REASONS } from "@/server/models/engagement";
+import { parseList } from "@/lib/list-params";
 import { routes } from "@/lib/routes";
-import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/money";
-import { adminDate } from "@/components/admin/format";
-import { AdminSkeleton, Badge, btnSecondary, Empty, inputCls, PageHeader, Table, STATUS_TONE, td, th } from "@/components/admin/ui";
+import { hasRole } from "@/server/auth";
+import { adminUser } from "@/server/admin/guard";
+import { listReturnsPaged } from "@/server/admin/lists";
+import { LIST_SPECS } from "@/server/admin/list-kinds";
+import { RETURN_REASONS } from "@/server/models/engagement";
+import { AdminSkeleton, Badge, Empty, PageHeader, STATUS_TONE } from "@/components/admin/ui";
+import { DataTable, ListTabs, type Column } from "@/components/admin/kit/DataTable";
+import { ListToolbar } from "@/components/admin/kit/ListToolbar";
+import { RelativeTime } from "@/components/admin/kit/Bits";
+import { AdminClaimButton } from "@/components/admin/ops/AdminClaim";
 
 export const metadata = { title: "Returns & claims" };
+
+const spec = LIST_SPECS.returns;
+const BASE = "/admin/returns";
+const TABS = [
+  { value: "requested,approved,received", label: "Open" },
+  { value: "requested", label: "New" },
+  { value: "refunded,replaced,closed", label: "Resolved" },
+  { value: "rejected", label: "Rejected" },
+  { value: "", label: "All" },
+];
 
 export default function Page(props: PageProps<"/admin/returns">) {
   return (
@@ -24,43 +37,50 @@ export default function Page(props: PageProps<"/admin/returns">) {
 async function AdminReturns({ searchParams }: PageProps<"/admin/returns">) {
   const user = await adminUser();
   if (!user) return null;
-  const sp = await searchParams;
-  const tab = (typeof sp.tab === "string" && sp.tab in RETURN_TABS ? sp.tab : "open") as ReturnTab;
-  const q = typeof sp.q === "string" ? sp.q.slice(0, 60) : "";
-  const rows = await listReturnsAdmin(tab, q);
+  const state = parseList(await searchParams, spec);
+  const { rows, total, statusCounts } = await listReturnsPaged(state);
+  type Row = (typeof rows)[number];
+  const count = (v: string) => (v ? v.split(",").reduce((n, s) => n + (statusCounts[s] ?? 0), 0) : Object.values(statusCounts).reduce((a, b) => a + b, 0));
+  const columns: Column<Row>[] = [
+    { key: "id", label: "Request", sort: "date", cell: (r) => <span className="flex flex-col"><Link href={routes.adminReturn(r._id)} className="font-medium hover:underline">{r._id}</Link><span className="text-xs text-neutral-500">{r.orderId} · <RelativeTime date={r.createdAt} /></span></span> },
+    { key: "customer", label: "Customer", cell: (r) => <span className="flex flex-col"><span>{r.name}</span><span className="text-xs text-neutral-500">{r.email}</span></span> },
+    { key: "reason", label: "Reason", cell: (r) => RETURN_REASONS[r.reason as keyof typeof RETURN_REASONS] ?? r.reason },
+    { key: "items", label: "Items", cell: (r) => <span className="block max-w-56 truncate text-xs" title={r.items.map((i) => `${i.name} ${i.variantLabel} × ${i.qty}`).join(", ")}>{r.items.map((i) => `${i.name} × ${i.qty}`).join(", ")}</span> },
+    { key: "value", label: "Value", sort: "value", align: "right", cell: (r) => formatPrice(r.valueP) },
+    { key: "status", label: "Status", cell: (r) => <span className="flex flex-col items-start gap-0.5"><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge>{r.resolution && <span className="text-xs text-neutral-500">{r.resolution}</span>}</span> },
+  ];
   return (
     <>
-      <PageHeader title="Returns & claims" description="Damaged, leaked or wrong items reported by customers, with their photos and video." />
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <nav aria-label="Status" className="flex flex-wrap gap-1">
-          {(Object.keys(RETURN_TABS) as ReturnTab[]).map((k) => (
-            <Link key={k} href={`/admin/returns?tab=${k}` as Route} aria-current={tab === k ? "page" : undefined} className={cn("rounded-lg px-3 py-1.5 text-sm font-medium", tab === k ? "bg-neutral-900 text-white" : "text-neutral-700 hover:bg-neutral-200/70")}>{RETURN_TABS[k].label}</Link>
-          ))}
-        </nav>
-        <form action="/admin/returns" className="flex gap-2">
-          <input type="hidden" name="tab" value={tab} />
-          <label className="relative"><span className="sr-only">Search</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" /><input name="q" defaultValue={q} placeholder="RT-, order or email" className={`${inputCls} w-64 pl-9`} /></label>
-          <button className={btnSecondary}>Search</button>
-        </form>
-      </div>
-      {rows.length === 0 ? (
-        <Empty title="No requests here">When a customer reports a problem from their order page, it appears in Open.</Empty>
-      ) : (
-        <Table>
-          <thead><tr><th className={th}>Request</th><th className={th}>Customer</th><th className={th}>Reason</th><th className={th}>Items</th><th className={th}>Status</th></tr></thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r._id} className="hover:bg-neutral-50">
-                <td className={td}><Link href={routes.adminReturn(r._id)} className="font-medium underline-offset-4 hover:underline">{r._id}</Link><span className="block text-xs text-neutral-500">{r.orderId} · {adminDate.format(r.createdAt)}</span></td>
-                <td className={td}>{r.name}<span className="block text-xs text-neutral-500">{r.email}</span></td>
-                <td className={td}>{RETURN_REASONS[r.reason]}{r.evidence.length ? <span className="block text-xs text-neutral-500">{r.evidence.length} attachment{r.evidence.length === 1 ? "" : "s"}</span> : null}</td>
-                <td className={td}>{r.items.map((i) => `${i.name} × ${i.qty}`).join(", ")}<span className="block text-xs text-neutral-500">{formatPrice(r.items.reduce((n, i) => n + i.unitPriceP * i.qty, 0))}</span></td>
-                <td className={td}><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge></td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
+      <PageHeader title="Returns & claims" description="Damaged, leaked or wrong items reported by customers, with their photos and video." actions={hasRole(user, "staff") ? <AdminClaimButton /> : undefined} />
+      <ListTabs base={BASE} spec={spec} state={state} filter="status" tabs={TABS.map((t) => ({ ...t, count: count(t.value) }))} />
+      <ListToolbar
+        placeholder="RT-, order number, email or name"
+        exportKind={hasRole(user, "owner") ? "returns" : undefined}
+        sorts={[{ value: "date", label: "Date" }, { value: "value", label: "Value" }]}
+        filters={[
+          { key: "reason", label: "Reason", type: "multi", options: Object.entries(RETURN_REASONS).map(([value, label]) => ({ value, label })) },
+          { key: "resolution", label: "Resolution", options: [{ value: "refund", label: "Refund" }, { value: "replacement", label: "Replacement" }] },
+          { key: "from", label: "From", type: "date" },
+          { key: "to", label: "To", type: "date" },
+        ]}
+      />
+      <DataTable
+        base={BASE}
+        spec={spec}
+        state={state}
+        total={total}
+        rows={rows}
+        columns={columns}
+        rowKey={(r) => r._id}
+        mobile={(r) => (
+          <Link href={routes.adminReturn(r._id)} className="flex flex-col gap-1">
+            <span className="flex justify-between gap-2"><span className="font-medium">{r._id}</span><Badge tone={STATUS_TONE[r.status]}>{r.status}</Badge></span>
+            <span className="text-neutral-600">{r.name} · {RETURN_REASONS[r.reason as keyof typeof RETURN_REASONS] ?? r.reason}</span>
+            <span className="text-xs text-neutral-500">{r.orderId} · <RelativeTime date={r.createdAt} /> · {formatPrice(r.valueP)}</span>
+          </Link>
+        )}
+        empty={<Empty title="No requests here">When a customer reports a problem from their order page, it appears in Open.</Empty>}
+      />
     </>
   );
 }

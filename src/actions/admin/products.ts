@@ -14,7 +14,7 @@ import { Category, Collection, HsnCode } from "@/server/models/catalog";
 import { AuditLog } from "@/server/models/commerce";
 import { tags, type LeanProduct } from "@/server/queries/catalog";
 import { BLANK_PRODUCT, editorToInput, productToInput, type EditorValue } from "@/server/admin/product-form";
-import { CatalogError, deleteProduct, duplicateProduct, saveProduct } from "@/server/services/catalog-admin";
+import { CatalogError, deleteProduct, discardProductDraft, duplicateProduct, getProductRevision, listProductRevisions, saveProduct, saveProductDraft } from "@/server/services/catalog-admin";
 import { BADGES, PRODUCT_TYPES } from "@/server/catalog/types";
 import { productInput } from "@/schemas/product";
 import { toFormError, type FormState } from "./shared";
@@ -37,17 +37,73 @@ function firstIssue(e: z.ZodError): string {
   return where ? `${where}: ${i.message}` : i.message;
 }
 
-export async function saveProductAction(raw: unknown): Promise<FormState & { id?: string }> {
+/** Editor section for a field path, so the save bar can link straight to each problem. */
+const SECTION_OF: Record<string, string> = {
+  name: "basics", slug: "basics", type: "basics", status: "basics", tagline: "basics", descriptionHtml: "basics",
+  categoryId: "organisation", collectionIds: "organisation", tags: "organisation", badges: "organisation", zodiacSign: "organisation", sortOrder: "organisation",
+  media: "media", imageAxis: "media", options: "variants", variants: "variants",
+  notes: "fragrance", intensity: "fragrance", concentration: "fragrance", howToWear: "fragrance",
+  specs: "details", aPlus: "details", display: "details",
+  hsnCode: "tax", manufacturer: "tax", packer: "tax", countryOfOrigin: "tax", genericName: "tax",
+  seoTitle: "seo", seoDescription: "seo", seoKeywords: "seo",
+};
+
+export type ProductIssue = { message: string; section: string };
+
+export async function saveProductAction(raw: unknown): Promise<FormState & { id?: string; issues?: ProductIssue[] }> {
   try {
     const user = await requireRole("admin");
     const parsed = productInput.safeParse(raw);
-    if (!parsed.success) return { error: firstIssue(parsed.error), fieldErrors: z.flattenError(parsed.error).fieldErrors as Record<string, string[]> };
+    if (!parsed.success) {
+      const issues = parsed.error.issues.slice(0, 8).map((i) => ({ message: i.message, section: SECTION_OF[String(i.path[0])] ?? "basics" }));
+      return { error: issues.length > 1 ? `${issues.length} things to fix before saving.` : firstIssue(parsed.error), issues, fieldErrors: z.flattenError(parsed.error).fieldErrors as Record<string, string[]> };
+    }
     const res = await saveProduct(parsed.data, actorOf(user));
     invalidate([res.slug, res.oldSlug]);
     return { ok: true, message: res.created ? "Product created." : "Saved. The store shows the changes now.", id: res.id };
   } catch (e) {
     return toFormError(e, "save_product");
   }
+}
+
+/**
+ * Keeps edits to a saved product without publishing them (plan.md §8.5). Validated like a save,
+ * but the publish checklist isn't enforced: a draft may be unfinished.
+ */
+export async function saveProductDraftAction(raw: unknown): Promise<FormState> {
+  try {
+    const user = await requireRole("admin");
+    const parsed = productInput.safeParse(raw);
+    if (!parsed.success) return { error: firstIssue(parsed.error) };
+    if (!parsed.data.id) return { error: "Save the product once before keeping a draft of it." };
+    await saveProductDraft(objectId.parse(parsed.data.id), parsed.data, actorOf(user));
+    return { ok: true, message: "Draft kept. The store still shows the published version." };
+  } catch (e) {
+    return toFormError(e, "save_product_draft");
+  }
+}
+
+export async function discardProductDraftAction(id: string): Promise<FormState> {
+  try {
+    await requireRole("admin");
+    await discardProductDraft(objectId.parse(id));
+    return { ok: true, message: "Draft discarded." };
+  } catch (e) {
+    return toFormError(e, "discard_product_draft");
+  }
+}
+
+export async function listProductRevisionsAction(id: string) {
+  await requireRole("admin");
+  return listProductRevisions(objectId.parse(id));
+}
+
+/** A saved version, to load into the editor (it isn't saved until the admin saves). */
+export async function getProductRevisionAction(id: string, revisionId: string) {
+  await requireRole("admin");
+  const value = await getProductRevision(objectId.parse(id), objectId.parse(revisionId));
+  const parsed = productInput.safeParse(value);
+  return parsed.success ? parsed.data : null;
 }
 
 export async function deleteProductAction(id: string): Promise<FormState> {
@@ -284,6 +340,114 @@ export async function importProductsCsvAction(text: string, apply: boolean): Pro
     return report;
   } catch (e) {
     return { ...report, error: toFormError(e, "import_products").error };
+  }
+}
+
+// ── Bulk edit (plan.md §8.5) ─────────────────────────────────────────────────
+
+const bulkEditInput = z
+  .array(
+    z.object({
+      id: objectId,
+      status: z.enum(["draft", "active", "archived"]).optional(),
+      categoryId: objectId.optional(),
+      badges: z.array(z.enum(Object.keys(BADGES) as [keyof typeof BADGES, ...(keyof typeof BADGES)[]])).optional(),
+      variants: z.array(z.object({ sku: z.string().max(40), mrp: z.number().min(0).optional(), price: z.number().min(0).optional(), isActive: z.boolean().optional() })).max(40).optional(),
+    }),
+  )
+  .min(1)
+  .max(300);
+
+export type BulkEditResult = { ok?: boolean; error?: string; saved: number; problems: { id: string; name: string; message: string }[] };
+
+/**
+ * Applies spreadsheet edits product by product through the normal save, so validation, the
+ * publish checklist and version history all apply. A product that fails is skipped and reported.
+ */
+export async function bulkEditProductsAction(raw: unknown): Promise<BulkEditResult> {
+  const result: BulkEditResult = { saved: 0, problems: [] };
+  try {
+    const user = await requireRole("admin");
+    const changes = bulkEditInput.parse(raw);
+    await db();
+    const slugs: string[] = [];
+    for (const c of changes) {
+      const doc = await Product.findById(c.id).lean<LeanProduct>();
+      if (!doc) {
+        result.problems.push({ id: c.id, name: c.id, message: "This product no longer exists." });
+        continue;
+      }
+      const collectionIds = (await Collection.find({ kind: "manual", productIds: new Types.ObjectId(c.id) }).select("_id").lean()).map((x) => String(x._id));
+      const v = productToInput(doc, collectionIds);
+      if (c.status) v.status = c.status;
+      if (c.categoryId) v.categoryId = c.categoryId;
+      if (c.badges) v.badges = c.badges;
+      for (const patch of c.variants ?? []) {
+        const row = v.variants.find((r) => r.sku === patch.sku);
+        if (!row) continue;
+        if (patch.mrp !== undefined) row.mrp = patch.mrp;
+        if (patch.price !== undefined) row.price = patch.price;
+        if (patch.isActive !== undefined) row.isActive = patch.isActive;
+      }
+      const parsed = productInput.safeParse(editorToInput(v));
+      if (!parsed.success) {
+        result.problems.push({ id: c.id, name: doc.name, message: firstIssue(parsed.error) });
+        continue;
+      }
+      try {
+        const res = await saveProduct(parsed.data, actorOf(user));
+        slugs.push(res.slug);
+        result.saved++;
+      } catch (e) {
+        result.problems.push({ id: c.id, name: doc.name, message: e instanceof CatalogError ? e.message : "Couldn't save." });
+      }
+    }
+    if (slugs.length) invalidate(slugs);
+    result.ok = result.problems.length === 0;
+    return result;
+  } catch (e) {
+    return { ...result, error: toFormError(e, "bulk_edit_products").error };
+  }
+}
+
+const assignInput = z.object({
+  ids: z.array(objectId).min(1).max(200),
+  categoryId: objectId.optional(),
+  addCollection: objectId.optional(),
+  addBadge: z.enum(Object.keys(BADGES) as [keyof typeof BADGES, ...(keyof typeof BADGES)[]]).optional(),
+  removeBadge: z.enum(Object.keys(BADGES) as [keyof typeof BADGES, ...(keyof typeof BADGES)[]]).optional(),
+});
+
+/** Bulk organisation from the product list: category, manual collection, badges (plan.md §5). */
+export async function bulkAssignProductsAction(raw: unknown): Promise<FormState> {
+  try {
+    const user = await requireRole("admin");
+    const a = assignInput.parse(raw);
+    await db();
+    const oids = a.ids.map((id) => new Types.ObjectId(id));
+    let what = "";
+    if (a.categoryId) {
+      const cat = await Category.findById(a.categoryId).select("name").lean();
+      if (!cat) return { error: "That category no longer exists." };
+      await Product.updateMany({ _id: { $in: oids } }, { $set: { categoryId: new Types.ObjectId(a.categoryId) } });
+      what = `moved to ${cat.name}`;
+    } else if (a.addCollection) {
+      const col = await Collection.findOneAndUpdate({ _id: a.addCollection, kind: "manual" }, { $addToSet: { productIds: { $each: oids } } }).select("name").lean();
+      if (!col) return { error: "Products can only be added to hand-picked (manual) collections." };
+      what = `added to ${col.name}`;
+    } else if (a.addBadge) {
+      await Product.updateMany({ _id: { $in: oids } }, { $addToSet: { badges: a.addBadge } });
+      what = `badged “${BADGES[a.addBadge]}”`;
+    } else if (a.removeBadge) {
+      await Product.updateMany({ _id: { $in: oids } }, { $pull: { badges: a.removeBadge } });
+      what = `“${BADGES[a.removeBadge]}” removed`;
+    } else return { error: "Choose what to change." };
+    const docs = await Product.find({ _id: { $in: oids } }).select("slug").lean();
+    await AuditLog.create({ actor: actorOf(user), action: "product.bulk_assign", entity: { kind: "product", id: a.ids.join(",").slice(0, 500) }, detail: { ...a, ids: undefined, count: a.ids.length } });
+    invalidate(docs.map((d) => d.slug));
+    return { ok: true, message: `${a.ids.length} product${a.ids.length === 1 ? "" : "s"} ${what}.` };
+  } catch (e) {
+    return toFormError(e, "bulk_assign_products");
   }
 }
 

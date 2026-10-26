@@ -1,14 +1,20 @@
-import Link from "next/link";
-import type { Route } from "next";
 import { Suspense } from "react";
+import type { Route } from "next";
+import { listQuery, parseList } from "@/lib/list-params";
 import { hasRole } from "@/server/auth";
 import { adminUser } from "@/server/admin/guard";
-import { listReviewsAdmin, OPS_PAGE } from "@/server/admin/ops";
-import { cn } from "@/lib/cn";
-import { AdminSkeleton, btnSecondary, Empty, PageHeader } from "@/components/admin/ui";
+import { listReviewsPaged } from "@/server/admin/lists";
+import { LIST_SPECS } from "@/server/admin/list-kinds";
+import { AdminSkeleton, Empty, PageHeader } from "@/components/admin/ui";
+import { ListTabs, Pagination } from "@/components/admin/kit/DataTable";
+import { ListToolbar } from "@/components/admin/kit/ListToolbar";
 import { ReviewCard } from "@/components/admin/ops/ReviewCard";
+import { REVIEW_FORM, ReviewBulkBar } from "@/components/admin/ops/ReviewBulkBar";
 
 export const metadata = { title: "Reviews" };
+
+const spec = LIST_SPECS.reviews;
+const BASE = "/admin/reviews";
 
 export default function Page(props: PageProps<"/admin/reviews">) {
   return (
@@ -18,39 +24,57 @@ export default function Page(props: PageProps<"/admin/reviews">) {
   );
 }
 
-const TABS = [
-  { key: "pending", label: "Waiting" },
-  { key: "approved", label: "Published" },
-  { key: "rejected", label: "Hidden" },
-  { key: "all", label: "All" },
-] as const;
-
 async function AdminReviews({ searchParams }: PageProps<"/admin/reviews">) {
   const user = await adminUser();
   if (!user) return null;
   const sp = await searchParams;
-  const status = TABS.find((t) => t.key === sp.status)?.key ?? "pending";
-  const page = Math.max(1, Number(sp.page) || 1);
-  const { rows, total, counts } = await listReviewsAdmin(status, page);
-  const all = Object.values(counts).reduce((a, b) => a + b, 0);
+  // Waiting reviews are the default view.
+  const state = parseList(sp.status === undefined ? { ...sp, status: "pending" } : sp.status === "all" ? { ...sp, status: undefined } : sp, spec);
+  const { rows, total, statusCounts } = await listReviewsPaged(state);
+  const all = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+  const pages = Math.max(1, Math.ceil(total / state.size));
+  const href = (patch: Parameters<typeof listQuery>[2]) => {
+    const q = listQuery(state, spec, patch);
+    return `${BASE}${q}${!state.f.status && !patch?.f?.status ? `${q ? "&" : "?"}status=all` : ""}` as Route;
+  };
   return (
     <>
       <PageHeader title="Reviews" description="Reviews appear on product pages only after you publish them. Verified purchase means the customer received this product." />
-      <nav aria-label="Status" className="mb-4 flex flex-wrap gap-1 border-b border-neutral-200">
-        {TABS.map((t) => (
-          <Link key={t.key} href={`/admin/reviews?status=${t.key}` as Route} aria-current={status === t.key ? "page" : undefined} className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", status === t.key ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-600 hover:text-neutral-900")}>
-            {t.label} <span className="ml-1 rounded-full bg-neutral-100 px-1.5 text-xs text-neutral-600">{t.key === "all" ? all : (counts[t.key] ?? 0)}</span>
-          </Link>
-        ))}
-      </nav>
+      <ListTabs
+        base={BASE}
+        spec={spec}
+        state={state}
+        filter="status"
+        tabs={[
+          { value: "pending", label: "Waiting", count: statusCounts.pending ?? 0 },
+          { value: "approved", label: "Published", count: statusCounts.approved ?? 0 },
+          { value: "rejected", label: "Hidden", count: statusCounts.rejected ?? 0 },
+        ]}
+      />
+      <p className="-mt-2 mb-3 text-xs"><a href={`${BASE}?status=all`} className="text-neutral-600 underline underline-offset-4">All {all}</a></p>
+      <ListToolbar
+        placeholder="Text, product, name or email"
+        exportKind={hasRole(user, "owner") ? "reviews" : undefined}
+        sorts={[{ value: "date", label: "Date" }, { value: "rating", label: "Rating" }]}
+        filters={[
+          { key: "rating", label: "Rating", type: "multi", options: [5, 4, 3, 2, 1].map((n) => ({ value: String(n), label: `${n} ★` })) },
+          { key: "verified", label: "Verified", options: [{ value: "yes", label: "Verified purchase" }, { value: "no", label: "Not verified" }] },
+          { key: "photos", label: "Photos", options: [{ value: "yes", label: "With photos" }, { value: "no", label: "Without photos" }] },
+        ]}
+      />
       {rows.length === 0 ? (
-        <Empty title={status === "pending" ? "Nothing waiting" : "No reviews here"}>New reviews from customers land in Waiting.</Empty>
+        <Empty title={state.f.status?.[0] === "pending" ? "Nothing waiting" : "No reviews match"}>New reviews from customers land in Waiting.</Empty>
       ) : (
-        <div className="flex flex-col gap-3">
-          {rows.map((r) => <ReviewCard key={r.id} r={r} canDelete={hasRole(user, "admin")} />)}
-        </div>
+        <>
+          <ReviewBulkBar />
+          <div className="flex flex-col gap-3">
+            {rows.map((r) => <ReviewCard key={r.id} r={r} canDelete={hasRole(user, "admin")} selectForm={REVIEW_FORM} />)}
+          </div>
+          <div className="mt-3">
+            <Pagination total={total} from={(state.page - 1) * state.size + 1} to={Math.min(total, state.page * state.size)} page={state.page} pages={pages} size={state.size} href={href} />
+          </div>
+        </>
       )}
-      {total > page * OPS_PAGE && <Link className={`${btnSecondary} mt-4`} href={`/admin/reviews?status=${status}&page=${page + 1}` as Route}>More</Link>}
     </>
   );
 }

@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import { parseList, type ListSpec } from "@/lib/list-params";
+import { ListToolbar } from "@/components/admin/kit/ListToolbar";
 import { Plus } from "lucide-react";
 import { adminUser } from "@/server/admin/guard";
 import { listCollectionsAdmin } from "@/server/admin/queries";
@@ -9,18 +11,28 @@ import { AdminSkeleton, Badge, btnPrimary, Empty, PageHeader, Table, td, th } fr
 
 export const metadata = { title: "Collections" };
 
-export default function Page() {
+const spec: ListSpec = { sorts: ["order", "name", "products"], defaultSort: "order", defaultDir: "asc", filters: ["kind", "visible", "featured"] };
+
+export default function Page(props: PageProps<"/admin/collections">) {
   return (
     <Suspense fallback={<AdminSkeleton />}>
-      <AdminCollections />
+      <AdminCollections {...props} />
     </Suspense>
   );
 }
 
-async function AdminCollections() {
+async function AdminCollections({ searchParams }: PageProps<"/admin/collections">) {
   const user = await adminUser("admin");
   if (!user) return <p className="text-sm text-neutral-600">Only admins can manage collections.</p>;
-  const rows = await listCollectionsAdmin();
+  const s = parseList(await searchParams, spec);
+  const q = s.q.toLowerCase();
+  const d = s.dir === "asc" ? 1 : -1;
+  const rows = (await listCollectionsAdmin())
+    .filter((c) => !q || c.name.toLowerCase().includes(q) || c.slug.includes(q))
+    .filter((c) => !s.f.kind || s.f.kind.includes(c.kind))
+    .filter((c) => !s.f.visible || (s.f.visible[0] === "yes") === c.isActive)
+    .filter((c) => !s.f.featured || (s.f.featured[0] === "yes") === c.featured)
+    .toSorted((a, b) => (s.sort === "name" ? d * a.name.localeCompare(b.name) : s.sort === "products" ? d * (a.liveProducts - b.liveProducts) : 0));
   return (
     <>
       <PageHeader
@@ -28,8 +40,18 @@ async function AdminCollections() {
         description="Curated groups across categories: hand-picked, or automatic by rules (sign, element, tag, price…)."
         actions={<Link href="/admin/collections/new" className={btnPrimary}><Plus className="size-4" /> New collection</Link>}
       />
+      <ListToolbar
+        placeholder="Name or URL"
+        sortAlways
+        sorts={[{ value: "name", label: "Name" }, { value: "products", label: "Live products" }]}
+        filters={[
+          { key: "kind", label: "Type", options: [{ value: "manual", label: "Hand-picked" }, { value: "smart", label: "Smart" }] },
+          { key: "visible", label: "Visibility", options: [{ value: "yes", label: "Visible" }, { value: "no", label: "Hidden" }] },
+          { key: "featured", label: "Featured", options: [{ value: "yes", label: "Featured" }, { value: "no", label: "Not featured" }] },
+        ]}
+      />
       {rows.length === 0 ? (
-        <Empty title="No collections yet">Create one to group products for a campaign, a season or an element.</Empty>
+        <Empty title="No collections match">Create one to group products for a campaign, a season or an element.</Empty>
       ) : (
         <Table>
           <thead><tr><th className={th}>Collection</th><th className={th}>Type</th><th className={`${th} text-right`}>Live products</th><th className={th}>Status</th></tr></thead>

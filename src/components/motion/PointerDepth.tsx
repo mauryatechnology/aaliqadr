@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
-import { cn } from "@/lib/cn";
+import { cx as cn } from "@/lib/cx";
 
 /**
  * Desktop pointer depth: children marked `data-depth` (with a `--d` strength in px) shift with
@@ -37,11 +37,4 @@ export function PointerDepth({ children, className }: { children: ReactNode; cla
   );
 }
 
-/** A layer inside PointerDepth. `strength` is the max shift in px (negative = opposite way). */
-export function Depth({ strength, children, className }: { strength: number; children: ReactNode; className?: string }) {
-  return (
-    <div data-depth="" className={className} style={{ "--d": `${strength}px` } as React.CSSProperties}>
-      {children}
-    </div>
-  );
-}
+export { Depth } from "./Depth";

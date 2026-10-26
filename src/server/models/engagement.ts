@@ -30,6 +30,8 @@ export interface ReviewDoc {
   status: ReviewStatus;
   reply?: { body: string; at: Date; by: string };
   moderatedBy?: Actor;
+  /** "Was this helpful?" votes (plan.md §10.3). */
+  helpful?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,6 +51,7 @@ const ReviewSchema = new Schema<ReviewDoc>(
     status: { type: String, enum: REVIEW_STATUSES, default: "pending" },
     reply: { body: String, at: Date, by: String },
     moderatedBy: ActorSchema,
+    helpful: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
@@ -121,9 +124,12 @@ export interface PolicyContent {
 
 export interface ContentDoc {
   _id: "storefront";
-  announcement: { text: string; href?: string; active: boolean };
-  banners: { id: string; title: string; subtitle?: string; cta?: string; href?: string; image?: { url: string; alt: string; width: number; height: number }; active: boolean }[];
+  /** `startsAt` / `endsAt` (ISO) schedule a message or banner (plan.md §5). */
+  announcement: { text: string; href?: string; active: boolean; startsAt?: string; endsAt?: string };
+  banners: { id: string; title: string; subtitle?: string; cta?: string; href?: string; image?: { url: string; alt: string; width: number; height: number }; active: boolean; startsAt?: string; endsAt?: string }[];
   faqs: { id: string; question: string; answer: string; group: string }[];
+  /** Storefront search: suggestions before typing, and extra synonym groups (plan.md §9.2). */
+  search?: { popular: string[]; synonyms: string[][] };
   policies: Partial<Record<PolicyKey, PolicyContent>>;
   updatedAt?: Date;
 }
@@ -132,9 +138,10 @@ const PolicySchema = new Schema<PolicyContent>({ title: String, summary: String,
 const ContentSchema = new Schema<ContentDoc>(
   {
     _id: { type: String, default: "storefront" },
-    announcement: { text: { type: String, default: "" }, href: String, active: { type: Boolean, default: false } },
-    banners: { type: [{ _id: false, id: String, title: String, subtitle: String, cta: String, href: String, image: ImageRef, active: Boolean }], default: [] },
+    announcement: { text: { type: String, default: "" }, href: String, active: { type: Boolean, default: false }, startsAt: String, endsAt: String },
+    banners: { type: [{ _id: false, id: String, title: String, subtitle: String, cta: String, href: String, image: ImageRef, active: Boolean, startsAt: String, endsAt: String }], default: [] },
     faqs: { type: [{ _id: false, id: String, question: String, answer: String, group: String }], default: [] },
+    search: { popular: { type: [String], default: [] }, synonyms: { type: [[String]], default: [] } },
     policies: { shipping: PolicySchema, returns: PolicySchema, privacy: PolicySchema, terms: PolicySchema, grievance: PolicySchema },
   },
   { timestamps: true },
@@ -185,3 +192,119 @@ const StaffInviteSchema = new Schema<StaffInviteDoc>(
 );
 StaffInviteSchema.index({ email: 1 }, { unique: true });
 export const StaffInvite = model<StaffInviteDoc>("StaffInvite", StaffInviteSchema);
+
+// ── Search analytics: what shoppers look for (no personal data) (plan.md §9.2) ──
+export interface SearchLogDoc {
+  q: string;
+  event: "search" | "click" | "add";
+  results?: number;
+  slug?: string;
+  createdAt?: Date;
+}
+const SearchLogSchema = new Schema<SearchLogDoc>(
+  {
+    q: { type: String, required: true, lowercase: true, trim: true, maxlength: 60 },
+    event: { type: String, enum: ["search", "click", "add"], required: true },
+    results: Number,
+    slug: String,
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+SearchLogSchema.index({ createdAt: -1, event: 1 });
+SearchLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 400 * 86_400 });
+export const SearchLog = model<SearchLogDoc>("SearchLog", SearchLogSchema);
+
+// ── Wishlist (plan.md §11.3): one row per saved product per customer ─────────
+export interface WishlistItemDoc {
+  userId: string;
+  productId: Types.ObjectId;
+  slug: string;
+  /** Lowest price when saved, so a price-drop alert knows what "drop" means. */
+  priceAtAddP: number;
+  alerts: { price: boolean; stock: boolean };
+  createdAt?: Date;
+}
+const WishlistItemSchema = new Schema<WishlistItemDoc>(
+  {
+    userId: { type: String, required: true },
+    productId: { type: Schema.Types.ObjectId, required: true },
+    slug: { type: String, required: true },
+    priceAtAddP: { type: Number, default: 0 },
+    alerts: { price: { type: Boolean, default: false }, stock: { type: Boolean, default: false } },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+WishlistItemSchema.index({ userId: 1, productId: 1 }, { unique: true });
+WishlistItemSchema.index({ productId: 1 });
+export const WishlistItem = model<WishlistItemDoc>("WishlistItem", WishlistItemSchema);
+
+// ── Stock alerts: "Notify me" on a sold-out size (plan.md §10.3) ─────────────
+export interface StockAlertDoc {
+  email: string;
+  sku: string;
+  productId: Types.ObjectId;
+  slug: string;
+  userId?: string;
+  notifiedAt?: Date;
+  createdAt?: Date;
+}
+const StockAlertSchema = new Schema<StockAlertDoc>(
+  {
+    email: { type: String, required: true, lowercase: true, trim: true },
+    sku: { type: String, required: true },
+    productId: { type: Schema.Types.ObjectId, required: true },
+    slug: { type: String, required: true },
+    userId: String,
+    notifiedAt: Date,
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+StockAlertSchema.index({ sku: 1, email: 1 }, { unique: true });
+StockAlertSchema.index({ sku: 1, notifiedAt: 1 });
+// Alerts that fired are kept 90 days, then removed.
+StockAlertSchema.index({ notifiedAt: 1 }, { expireAfterSeconds: 90 * 86_400 });
+export const StockAlert = model<StockAlertDoc>("StockAlert", StockAlertSchema);
+
+// ── Helpful votes: one per review per voter (signed-in id or a hashed device key) ──
+export interface ReviewVoteDoc {
+  reviewId: Types.ObjectId;
+  voter: string;
+  createdAt?: Date;
+}
+const ReviewVoteSchema = new Schema<ReviewVoteDoc>({ reviewId: { type: Schema.Types.ObjectId, required: true }, voter: { type: String, required: true } }, { timestamps: { createdAt: true, updatedAt: false } });
+ReviewVoteSchema.index({ reviewId: 1, voter: 1 }, { unique: true });
+export const ReviewVote = model<ReviewVoteDoc>("ReviewVote", ReviewVoteSchema);
+
+// ── Product questions (plan.md §10.3): asked publicly, shown once answered ───
+export const QUESTION_STATUSES = ["pending", "answered", "hidden"] as const;
+export type QuestionStatus = (typeof QUESTION_STATUSES)[number];
+export interface QuestionDoc {
+  _id: Types.ObjectId;
+  productId: Types.ObjectId;
+  productSlug: string;
+  productName: string;
+  question: string;
+  name: string;
+  email: string;
+  userId?: string;
+  status: QuestionStatus;
+  answer?: { body: string; by: string; at: Date };
+  createdAt: Date;
+}
+const QuestionSchema = new Schema<QuestionDoc>(
+  {
+    productId: { type: Schema.Types.ObjectId, required: true },
+    productSlug: { type: String, required: true },
+    productName: { type: String, required: true },
+    question: { type: String, required: true, maxlength: 500 },
+    name: { type: String, required: true },
+    email: { type: String, required: true, lowercase: true, select: false },
+    userId: String,
+    status: { type: String, enum: QUESTION_STATUSES, default: "pending" },
+    answer: { body: String, by: String, at: Date },
+  },
+  { timestamps: true },
+);
+QuestionSchema.index({ productId: 1, status: 1, createdAt: -1 });
+QuestionSchema.index({ status: 1, createdAt: -1 });
+export const Question = model<QuestionDoc>("Question", QuestionSchema);

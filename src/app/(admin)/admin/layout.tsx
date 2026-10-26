@@ -8,6 +8,9 @@ import { Logo } from "@/components/brand/Logo";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { getAdminBadges } from "@/server/admin/ops";
+import { Toaster } from "@/components/admin/kit/Toaster";
+import { DensityToggle } from "@/components/admin/kit/Bits";
+import { CommandPalette, PaletteHint } from "@/components/admin/kit/CommandPalette";
 
 export const metadata: Metadata = {
   title: { default: "Admin", template: "%s · Aaliqadr Admin" },
@@ -18,6 +21,9 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="min-h-dvh bg-neutral-100 font-sans text-neutral-900 [color-scheme:light]">
+      {/* Row density is chosen per browser; set it before paint so tables don't jump. */}
+      <script dangerouslySetInnerHTML={{ __html: `try{var d=localStorage.getItem("aq.admin-density");if(d)document.documentElement.dataset.density=d}catch(e){}` }} />
+      <Toaster />
       <Suspense fallback={<Skeleton />}>
         <Gate>{children}</Gate>
       </Suspense>
@@ -46,10 +52,25 @@ async function Gate({ children }: { children: React.ReactNode }) {
       </Centered>
     );
   }
+  if (hasRole(user, "admin") && !user.twoFactorEnabled) {
+    return (
+      <Centered
+        title="Two-factor authentication required"
+        body={`${email} has an administrator role. You must enable 2FA on your account before accessing the admin dashboard.`}
+      >
+        <Link
+          href="/account/security"
+          className="inline-flex h-10 items-center rounded-lg bg-neutral-900 px-5 text-sm font-medium text-white hover:bg-neutral-800"
+        >
+          Set up 2FA in Account Security
+        </Link>
+      </Centered>
+    );
+  }
   const role = user.role === "customer" ? "staff" : user.role;
   const badges = await getAdminBadges();
   return (
-    <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:px-6 lg:py-6">
+    <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-5 px-3 py-3 lg:grid-cols-[220px_minmax(0,1fr)] lg:px-5 lg:py-5">
       <aside className="flex flex-col gap-5 lg:sticky lg:top-6 lg:h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:pr-1 [scrollbar-width:thin]">
         <div className="flex items-center justify-between gap-3 lg:flex-col lg:items-start">
           <Link href="/admin" className="flex items-center gap-2 text-neutral-900" aria-label="Admin home">
@@ -58,6 +79,8 @@ async function Gate({ children }: { children: React.ReactNode }) {
           </Link>
           <AdminNav role={role} badges={badges} />
         </div>
+        <div className="hidden lg:block"><PaletteHint /></div>
+        <CommandPalette />
         <div className="mt-auto hidden flex-col gap-3 border-t border-neutral-200 pt-4 text-sm lg:flex">
           <div>
             <p className="font-medium">{user.name}</p>
@@ -68,6 +91,7 @@ async function Gate({ children }: { children: React.ReactNode }) {
           <Link href="/" className="flex items-center gap-2 text-neutral-600 hover:text-neutral-900">
             <ExternalLink className="size-4" aria-hidden /> View store
           </Link>
+          <DensityToggle />
           <SignOutButton className="text-neutral-600 hover:text-neutral-900" />
         </div>
       </aside>

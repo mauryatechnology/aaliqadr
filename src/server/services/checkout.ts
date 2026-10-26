@@ -34,6 +34,8 @@ export interface QuoteInput {
   storeStateCode: string;
   coupon?: CouponRule;
   settings: CheckoutSettings;
+  /** The store turned COD off for this customer (plan.md §5). */
+  codBlocked?: boolean;
 }
 
 export interface QuoteLine extends PricedLine {
@@ -98,7 +100,10 @@ export function quoteCheckout(input: QuoteInput): Quote {
   let codAvailable = settings.codEnabled;
   let codUnavailableReason: string | undefined;
   if (!settings.codEnabled) codUnavailableReason = "Cash on delivery is currently unavailable.";
-  else if (lines.some((l) => !l.codAllowed)) {
+  else if (input.codBlocked) {
+    codAvailable = false;
+    codUnavailableReason = "Cash on delivery isn't available for this account. Please pay online.";
+  } else if (lines.some((l) => !l.codAllowed)) {
     codAvailable = false;
     codUnavailableReason = "One of the items in your bag is prepaid only.";
   } else if (preCodTotal > settings.codMaxOrderP) {

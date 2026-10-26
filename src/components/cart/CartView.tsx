@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
@@ -64,8 +65,8 @@ export function CartView() {
         <ul className="flex flex-col divide-y divide-white/10">
           {(view?.lines ?? []).map((l) => (
             <li key={l.sku} data-zodiac={l.zodiacSign} className="flex gap-4 py-5">
-              <Link href={routes.product(l.slug)} className="grid h-28 w-22 shrink-0 place-items-center rounded-xl p-2" style={{ background: "radial-gradient(circle at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
-                <BottleArt sign={l.zodiacSign} className="h-full w-auto" />
+              <Link href={routes.product(l.slug)} className="relative grid h-28 w-22 shrink-0 place-items-center overflow-hidden rounded-xl p-2" style={{ background: "radial-gradient(circle at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
+                {l.image ? <Image src={l.image} alt={`${l.name}, ${l.variantLabel}`} fill sizes="88px" className="object-cover" /> : <BottleArt sign={l.zodiacSign} className="h-full w-auto" />}
               </Link>
               <div className="flex flex-1 flex-col gap-1">
                 <Link href={routes.product(l.slug)} className="font-display text-xl hover:text-gold">

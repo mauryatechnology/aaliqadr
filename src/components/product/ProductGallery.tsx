@@ -1,26 +1,36 @@
 "use client";
 
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Expand, Play, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Expand, Play } from "lucide-react";
 import type { MediaItem } from "@/server/catalog/types";
-import { cn } from "@/lib/cn";
+import { imagesFor } from "@/lib/variant-media";
+import { cx as cn } from "@/lib/cx";
 import { useProductState } from "./ProductState";
+
+const GalleryLightbox = dynamic(() => import("./GalleryLightbox").then((m) => m.GalleryLightbox), { ssr: false });
 
 /**
  * Product gallery (docs/09 §6): swipeable CSS scroll-snap slides, thumbnails, keyboard arrows,
  * and a full-screen lightbox with click-to-zoom. No carousel library: scroll-snap does the
- * physics. The selected variant's own photos move to the front.
+ * physics. Shows exactly the selected variant's photos (plan.md §8.6): its own, else its
+ * option value's, then shared ones; never another variant's.
  */
-export function ProductGallery({ media, name, fallback, viewTransitionName }: { media: MediaItem[]; name: string; fallback: ReactNode; viewTransitionName: string }) {
+export function ProductGallery({ media, name, fallback, viewTransitionName, imageAxis, sharedAfterVariant = true }: { media: MediaItem[]; name: string; fallback: ReactNode; viewTransitionName: string; imageAxis?: number; sharedAfterVariant?: boolean }) {
   const { variants, sku } = useProductState();
-  const own = variants.find((v) => v.sku === sku)?.mediaIds ?? [];
-  const items = [...own.map((id) => media.find((m) => m.id === id)).filter((m): m is MediaItem => !!m), ...media.filter((m) => !own.includes(m.id))];
+  const items = imagesFor({ media, variants, imageAxis, display: { sharedAfterVariant } }, sku);
   const track = useRef<HTMLDivElement>(null);
   const thumbs = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
-  const ownKey = own.join(",");
+  const ownKey = items.map((m) => m.id).join(",");
+  const [shownKey, setShownKey] = useState(ownKey);
+  // A different set of photos: start again at its first one.
+  if (shownKey !== ownKey) {
+    setShownKey(ownKey);
+    setIndex(0);
+  }
 
   // A new variant with its own photos: show its first one.
   useEffect(() => {
@@ -90,6 +100,7 @@ export function ProductGallery({ media, name, fallback, viewTransitionName }: { 
 
       <div className="relative min-w-0 flex-1">
         <div
+          key={ownKey}
           ref={track}
           tabIndex={0}
           aria-roledescription="carousel"
@@ -99,7 +110,7 @@ export function ProductGallery({ media, name, fallback, viewTransitionName }: { 
             if (e.key === "ArrowLeft") go(index - 1);
           }}
           className="surface flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto overflow-y-clip rounded-[inherit] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-[var(--z-primary)] [&::-webkit-scrollbar]:hidden"
-          style={{ viewTransitionName, background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}
+          style={{ viewTransitionName, background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)", animation: "aq-fade 0.35s ease" }}
         >
           {items.map((m, i) => (
             <div key={m.id} data-index={i} className="relative size-full shrink-0 snap-center" aria-roledescription="slide" aria-label={`${i + 1} of ${items.length}`}>
@@ -139,78 +150,7 @@ export function ProductGallery({ media, name, fallback, viewTransitionName }: { 
         )}
       </div>
 
-      {lightbox && <Lightbox items={items.filter((m) => m.kind === "image")} start={Math.max(0, items.filter((m) => m.kind === "image").indexOf(items[index]!))} onClose={() => setLightbox(false)} />}
+      {lightbox && <GalleryLightbox items={items.filter((m) => m.kind === "image")} start={Math.max(0, items.filter((m) => m.kind === "image").indexOf(items[index]!))} onClose={() => setLightbox(false)} />}
     </div>
-  );
-}
-
-function Lightbox({ items, start, onClose }: { items: MediaItem[]; start: number; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const [i, setI] = useState(start);
-  const [zoom, setZoom] = useState(false);
-  const [origin, setOrigin] = useState("50% 50%");
-  const m = items[i];
-
-  useEffect(() => {
-    const d = ref.current;
-    d?.showModal();
-    document.documentElement.style.overflow = "hidden";
-    return () => {
-      document.documentElement.style.overflow = "";
-      d?.close();
-    };
-  }, []);
-
-  const step = (d: number) => {
-    setZoom(false);
-    setI((x) => (x + d + items.length) % items.length);
-  };
-
-  if (!m) return null;
-  return (
-    <dialog
-      ref={ref}
-      aria-label="Image viewer"
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowRight") step(1);
-        if (e.key === "ArrowLeft") step(-1);
-      }}
-      className="m-0 h-dvh max-h-none w-screen max-w-none bg-black/95 p-0 text-white backdrop:bg-black/80"
-    >
-      <div className="relative grid size-full place-items-center overflow-hidden">
-        <button
-          type="button"
-          aria-label={zoom ? "Zoom out" : "Zoom in"}
-          className={cn("relative size-full", zoom ? "cursor-zoom-out" : "cursor-zoom-in")}
-          onClick={(e) => {
-            const r = e.currentTarget.getBoundingClientRect();
-            setOrigin(`${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`);
-            setZoom((z) => !z);
-          }}
-          onPointerMove={(e) => {
-            if (!zoom || e.pointerType !== "mouse") return;
-            const r = e.currentTarget.getBoundingClientRect();
-            setOrigin(`${((e.clientX - r.left) / r.width) * 100}% ${((e.clientY - r.top) / r.height) * 100}%`);
-          }}
-        >
-          <Image src={m.url} alt={m.alt} fill quality={85} sizes="100vw" unoptimized={m.url.endsWith(".svg")} className="object-contain transition-transform duration-300" style={{ transform: zoom ? "scale(2.2)" : "scale(1)", transformOrigin: origin }} />
-        </button>
-        <div className="absolute right-4 top-4 flex gap-2">
-          <button type="button" aria-label={zoom ? "Zoom out" : "Zoom in"} onClick={() => setZoom((z) => !z)} className="grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20">{zoom ? <ZoomOut className="size-5" /> : <ZoomIn className="size-5" />}</button>
-          <button type="button" aria-label="Close" onClick={onClose} className="grid size-11 place-items-center rounded-full bg-white/10 hover:bg-white/20"><X className="size-5" /></button>
-        </div>
-        {items.length > 1 && (
-          <>
-            <button type="button" aria-label="Previous image" onClick={() => step(-1)} className="absolute left-4 top-1/2 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 hover:bg-white/20"><ChevronLeft className="size-6" /></button>
-            <button type="button" aria-label="Next image" onClick={() => step(1)} className="absolute right-4 top-1/2 grid size-12 -translate-y-1/2 place-items-center rounded-full bg-white/10 hover:bg-white/20"><ChevronRight className="size-6" /></button>
-            <p className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm text-white/70" aria-live="polite">{i + 1} / {items.length}</p>
-          </>
-        )}
-      </div>
-    </dialog>
   );
 }

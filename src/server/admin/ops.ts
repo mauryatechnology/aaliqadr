@@ -4,8 +4,8 @@ import { db } from "@/server/db/connect";
 import { Order, type OrderDoc } from "@/server/models/Order";
 import { Product } from "@/server/models/Product";
 import { Category } from "@/server/models/catalog";
-import { Address, AuditLog, AuthUser, Payment, type AddressDoc, type AuditLogDoc, type AuthUserDoc } from "@/server/models/commerce";
-import { Content, PolicyVersion, ReturnRequest, Review, StaffInvite, type ContentDoc, type ReturnDoc, type ReviewDoc, type ReviewStatus, type ReturnStatus, type StaffInviteDoc } from "@/server/models/engagement";
+import { Address, AuthUser, Payment, type AddressDoc, type AuthUserDoc } from "@/server/models/commerce";
+import { Content, PolicyVersion, Question, ReturnRequest, Review, SearchLog, StaffInvite, type QuestionDoc, type ContentDoc, type ReturnDoc, type ReviewDoc, type StaffInviteDoc } from "@/server/models/engagement";
 import { financialYear } from "@/server/services/ids";
 
 /** Admin reads for returns, reviews, customers, staff, content, invoices and reports (docs/11). */
@@ -16,49 +16,18 @@ export const OPS_PAGE = 25;
 
 export async function getAdminBadges() {
   await db();
-  const [toShip, returns, reviews] = await Promise.all([
+  const [toShip, returns, reviews, questions] = await Promise.all([
     Order.countDocuments({ status: { $in: ["confirmed", "processing"] } }),
     ReturnRequest.countDocuments({ status: { $in: ["requested", "approved", "received"] } }),
     Review.countDocuments({ status: "pending" }),
+    Question.countDocuments({ status: "pending" }),
   ]);
-  return { toShip, returns, reviews };
+  return { toShip, returns, reviews, questions };
 }
 
 // ── Reviews ─────────────────────────────────────────────────────────────────
 
-export async function listReviewsAdmin(status: ReviewStatus | "all", page: number) {
-  await db();
-  const filter = status === "all" ? {} : { status };
-  const [rows, total, counts] = await Promise.all([
-    Review.find(filter).select("+email").sort({ createdAt: -1 }).skip((page - 1) * OPS_PAGE).limit(OPS_PAGE).lean<ReviewDoc[]>(),
-    Review.countDocuments(filter),
-    Review.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$status", n: { $sum: 1 } } }]),
-  ]);
-  return {
-    total,
-    counts: Object.fromEntries(counts.map((c) => [c._id, c.n])) as Record<string, number>,
-    rows: rows.map((r) => ({ id: String(r._id), productName: r.productName, productSlug: r.productSlug, name: r.name, email: r.email, rating: r.rating, title: r.title, body: r.body, photos: r.photos, verified: r.verified, status: r.status, reply: r.reply?.body ?? "", createdAt: r.createdAt.toISOString() })),
-  };
-}
-
 // ── Returns ─────────────────────────────────────────────────────────────────
-
-export const RETURN_TABS = {
-  open: { label: "Open", statuses: ["requested", "approved", "received"] },
-  requested: { label: "New", statuses: ["requested"] },
-  done: { label: "Resolved", statuses: ["refunded", "replaced", "closed"] },
-  rejected: { label: "Rejected", statuses: ["rejected"] },
-  all: { label: "All", statuses: ["requested", "approved", "received", "refunded", "replaced", "closed", "rejected"] },
-} as const satisfies Record<string, { label: string; statuses: readonly ReturnStatus[] }>;
-export type ReturnTab = keyof typeof RETURN_TABS;
-
-export async function listReturnsAdmin(tab: ReturnTab, q: string) {
-  await db();
-  const filter: Record<string, unknown> = { status: { $in: RETURN_TABS[tab].statuses } };
-  if (q.trim()) filter.$or = [{ _id: q.trim().toUpperCase() }, { orderId: q.trim().toUpperCase() }, { email: { $regex: esc(q), $options: "i" } }, { name: { $regex: esc(q), $options: "i" } }];
-  const rows = await ReturnRequest.find(filter).sort({ createdAt: -1 }).limit(100).lean<ReturnDoc[]>();
-  return rows;
-}
 
 export async function getReturnAdmin(id: string) {
   if (!/^RT-\d{6,}$/.test(id)) return null;
@@ -89,7 +58,8 @@ export async function getCustomerAdmin(id: string) {
     ]),
   ]);
   const s = stats[0];
-  return { user: { id, name: u.name ?? "", email: u.email, role: u.role ?? "customer", phone: (u as { phone?: string }).phone, joined: u.createdAt }, orders, addresses, reviews, returns, ltv: { spentP: s?.spentP ?? 0, orders: s?.n ?? 0, aovP: s?.n ? Math.round(s.spentP / s.n) : 0, first: s?.first, last: s?.last } };
+  const flags = u as { disabled?: boolean; codBlocked?: boolean };
+  return { user: { id, name: u.name ?? "", email: u.email, role: u.role ?? "customer", phone: (u as { phone?: string }).phone, joined: u.createdAt, disabled: !!flags.disabled, codBlocked: !!flags.codBlocked }, orders, addresses, reviews, returns, ltv: { spentP: s?.spentP ?? 0, orders: s?.n ?? 0, aovP: s?.n ? Math.round(s.spentP / s.n) : 0, first: s?.first, last: s?.last } };
 }
 
 // ── Staff ───────────────────────────────────────────────────────────────────
@@ -118,11 +88,10 @@ export async function getContentAdmin() {
     ]),
   ]);
   return {
-    content: JSON.parse(JSON.stringify({ announcement: doc?.announcement ?? { text: "", active: false }, banners: doc?.banners ?? [], faqs: doc?.faqs ?? [], policies: doc?.policies ?? {} })) as Pick<ContentDoc, "announcement" | "banners" | "faqs" | "policies">,
+    content: JSON.parse(JSON.stringify({ announcement: doc?.announcement ?? { text: "", active: false }, banners: doc?.banners ?? [], faqs: doc?.faqs ?? [], search: { popular: doc?.search?.popular ?? [], synonyms: doc?.search?.synonyms ?? [] }, policies: doc?.policies ?? {} })) as Pick<ContentDoc, "announcement" | "banners" | "faqs" | "policies"> & { search: { popular: string[]; synonyms: string[][] } },
     history: Object.fromEntries(versions.map((v) => [v._id, v.versions.slice(0, 10)])) as Record<string, { version: number; at: Date; by: string }[]>,
   };
 }
-
 
 // ── Invoices ────────────────────────────────────────────────────────────────
 
@@ -224,10 +193,33 @@ export async function salesReport(from: Date, to: Date) {
 
 // ── Activity log ────────────────────────────────────────────────────────────
 
-export async function listAudit(q: string, page: number) {
+
+// ── Search analytics (plan.md §9.2) ─────────────────────────────────────────
+
+export async function searchReport(from: Date, to: Date) {
   await db();
-  const filter = q.trim() ? { $or: [{ action: { $regex: esc(q), $options: "i" } }, { "entity.id": { $regex: esc(q), $options: "i" } }, { "actor.name": { $regex: esc(q), $options: "i" } }] } : {};
-  const [rows, total] = await Promise.all([AuditLog.find(filter).sort({ createdAt: -1 }).skip((page - 1) * 50).limit(50).lean<(AuditLogDoc & { _id: unknown })[]>(), AuditLog.countDocuments(filter)]);
-  return { rows, total };
+  const match = { createdAt: { $gte: from, $lt: to } };
+  const [top, zero, totals] = await Promise.all([
+    SearchLog.aggregate<{ _id: string; n: number; avgResults: number }>([{ $match: { ...match, event: "search" } }, { $group: { _id: "$q", n: { $sum: 1 }, avgResults: { $avg: "$results" } } }, { $sort: { n: -1 } }, { $limit: 15 }]),
+    SearchLog.aggregate<{ _id: string; n: number }>([{ $match: { ...match, event: "search", results: 0 } }, { $group: { _id: "$q", n: { $sum: 1 } } }, { $sort: { n: -1 } }, { $limit: 15 }]),
+    SearchLog.aggregate<{ _id: string; n: number }>([{ $match: match }, { $group: { _id: "$event", n: { $sum: 1 } } }]),
+  ]);
+  const count = Object.fromEntries(totals.map((t) => [t._id, t.n])) as Record<string, number>;
+  return { top, zero, searches: count.search ?? 0, clicks: count.click ?? 0, adds: count.add ?? 0 };
 }
 
+// ── Product questions ───────────────────────────────────────────────────────
+
+export async function listQuestionsAdmin(status: "pending" | "answered" | "hidden", page: number) {
+  await db();
+  const [rows, total, counts] = await Promise.all([
+    Question.find({ status }).select("+email").sort({ createdAt: -1 }).skip((page - 1) * OPS_PAGE).limit(OPS_PAGE).lean<QuestionDoc[]>(),
+    Question.countDocuments({ status }),
+    Question.aggregate<{ _id: string; n: number }>([{ $group: { _id: "$status", n: { $sum: 1 } } }]),
+  ]);
+  return {
+    total,
+    counts: Object.fromEntries(counts.map((c) => [c._id, c.n])) as Record<string, number>,
+    rows: rows.map((q) => ({ id: String(q._id), productName: q.productName, productSlug: q.productSlug, question: q.question, name: q.name, email: q.email, status: q.status, answer: q.answer?.body ?? "", at: q.createdAt.toISOString() })),
+  };
+}

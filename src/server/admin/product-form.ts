@@ -27,7 +27,7 @@ export const BLANK_PRODUCT: EditorValue = {
   media: [],
   specs: [],
   aPlus: [],
-  display: { notes: true, profile: true, specs: true },
+  display: { notes: true, profile: true, specs: true, sharedAfterVariant: true },
   manufacturer: `${site.legal.legalName}, ${site.legal.city}, ${site.legal.state}`,
   packer: "",
   countryOfOrigin: "India",
@@ -37,10 +37,13 @@ export const BLANK_PRODUCT: EditorValue = {
   seoDescription: "",
   seoKeywords: [],
   sortOrder: 50,
+  publishAt: "",
+  unpublishAt: "",
 };
 
 /** A stored product as editor/import input (rupees, plain values). */
-export function productToInput(d: LeanProduct, collectionIds: string[]): EditorValue {
+/** `withCost` adds cost prices: only for the owner, and only when `d` was read with `+variants.costP`. */
+export function productToInput(d: LeanProduct, collectionIds: string[], withCost = false): EditorValue {
   return {
     id: String(d._id),
     name: d.name,
@@ -77,26 +80,45 @@ export function productToInput(d: LeanProduct, collectionIds: string[]): EditorV
       maxPerOrder: v.maxPerOrder ?? 5,
       codAllowed: v.codAllowed ?? true,
       isActive: v.isActive ?? true,
-      mediaIds: v.mediaIds ?? [],
+      ...(withCost ? { cost: typeof v.costP === "number" ? v.costP / 100 : undefined } : {}),
+      // Ownership now lives on each photo's scope (converted below).
+      mediaIds: [],
       initialStock: 0,
       existing: true,
       stock: v.stock,
       reserved: v.reserved ?? 0,
     })),
     media: (d.media && d.media.length > 0)
-      ? d.media.map((m, i) => ({
-          id: m.id ?? `m${i}`,
-          kind: (m.kind ?? "image") as "image" | "video",
-          url: m.url,
-          ...(m.posterUrl ? { posterUrl: m.posterUrl } : {}),
-          alt: m.alt,
-          width: m.width,
-          height: m.height,
-        }))
+      ? d.media.map((m, i) => {
+          const id = m.id ?? `m${i}`;
+          // Legacy: a gallery item a variant pointed at (mediaIds) becomes that variant's photo.
+          const legacyOwner = d.variants.find((v) => v.mediaIds?.includes(id));
+          const scope: EditorValue["media"][number]["scope"] =
+            m.scope?.kind === "variant" && m.scope.sku
+              ? { kind: "variant", sku: m.scope.sku }
+              : m.scope?.kind === "option" && typeof m.scope.axis === "number" && m.scope.value
+                ? { kind: "option", axis: m.scope.axis, value: m.scope.value }
+                : legacyOwner
+                  ? { kind: "variant", sku: legacyOwner.sku }
+                  : { kind: "shared" };
+          return {
+            id,
+            kind: (m.kind ?? "image") as "image" | "video",
+            scope,
+            url: m.url,
+            ...(m.posterUrl ? { posterUrl: m.posterUrl } : {}),
+            ...(m.hash ? { hash: m.hash } : {}),
+            ...(m.blurDataURL ? { blurDataURL: m.blurDataURL } : {}),
+            alt: m.alt,
+            width: m.width,
+            height: m.height,
+          };
+        })
       : [
           {
             id: `bottle-${d.zodiacSign ?? "brand"}`,
             kind: "image" as const,
+            scope: { kind: "shared" as const },
             url: `/bottles/${d.zodiacSign ?? "brand"}.svg`,
             alt: `${d.name} signature bottle artwork`,
             width: 720,
@@ -105,7 +127,8 @@ export function productToInput(d: LeanProduct, collectionIds: string[]): EditorV
         ],
     specs: (d.specs ?? []).map((s) => ({ label: s.label ?? "", value: s.value ?? "" })),
     aPlus: d.aPlus ? (JSON.parse(JSON.stringify(d.aPlus)) as EditorValue["aPlus"]) : [],
-    display: { notes: d.display?.notes ?? true, profile: d.display?.profile ?? true, specs: d.display?.specs ?? true },
+    display: { notes: d.display?.notes ?? true, profile: d.display?.profile ?? true, specs: d.display?.specs ?? true, sharedAfterVariant: d.display?.sharedAfterVariant ?? true },
+    imageAxis: typeof d.imageAxis === "number" ? d.imageAxis : undefined,
     manufacturer: d.legal?.manufacturer ?? "",
     packer: d.legal?.packer ?? "",
     countryOfOrigin: d.legal?.countryOfOrigin ?? "India",
@@ -115,6 +138,8 @@ export function productToInput(d: LeanProduct, collectionIds: string[]): EditorV
     seoDescription: d.seo?.description ?? "",
     seoKeywords: d.seo?.keywords ?? [],
     sortOrder: d.sortOrder ?? 0,
+    publishAt: d.schedule?.publishAt ? new Date(d.schedule.publishAt).toISOString() : "",
+    unpublishAt: d.schedule?.unpublishAt ? new Date(d.schedule.unpublishAt).toISOString() : "",
   };
 }
 

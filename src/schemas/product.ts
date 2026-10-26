@@ -11,6 +11,9 @@ const objectId = z.string().regex(/^[a-f0-9]{24}$/);
 const text = (max: number) => z.string().trim().max(max);
 const httpsUrl = z.url({ protocol: /^https$/ }).or(z.string().regex(/^\/[\w./-]+$/));
 
+/** An ISO date-time with offset, or "" for none. */
+const isoTime = z.union([z.literal(""), z.iso.datetime({ offset: true })]).default("");
+
 export const variantInput = z
   .object({
     sku: z.string().trim().toUpperCase().regex(SKU_RE, "SKU must look like AQ-ARI-50 (AQ-, a code, then one or two option codes)"),
@@ -29,14 +32,25 @@ export const variantInput = z
     mediaIds: z.array(z.string().max(40)).max(20),
     /** Only used when the variant is new; existing stock changes go through Inventory. */
     initialStock: z.number().int().min(0).max(100000),
+    /** Cost price in rupees (owner only; absent = keep what's stored). */
+    cost: z.number().min(0).max(10_000_000).optional(),
   })
   .refine((v) => v.price <= v.mrp, { message: "Price can't be above MRP", path: ["price"] });
 
 const note = z.object({ name: z.string().trim().min(1).max(40), family: z.string().trim().min(1).max(20) });
 
+export const mediaScope = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("shared") }),
+  z.object({ kind: z.literal("variant"), sku: z.string().max(40) }),
+  z.object({ kind: z.literal("option"), axis: z.number().int().min(0).max(1), value: z.string().max(40) }),
+]);
+
 export const mediaInput = z.object({
   id: z.string().min(1).max(40),
   kind: z.enum(["image", "video"]),
+  scope: mediaScope.default({ kind: "shared" }),
+  hash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  blurDataURL: z.string().regex(/^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/).max(4000).optional(),
   url: httpsUrl,
   posterUrl: httpsUrl.optional(),
   alt: z.string().trim().min(3, "Describe every image (alt text)").max(140),
@@ -78,10 +92,11 @@ export const productInput = z
       .array(z.object({ name: z.string().trim().min(1, "Name the option (e.g. Size)").max(30), values: z.array(z.string().trim().min(1).max(40)).min(1, "Add at least one value").max(12) }))
       .max(MAX_OPTIONS),
     variants: z.array(variantInput).min(1, "Add at least one variant").max(40),
-    media: z.array(mediaInput).max(20),
+    media: z.array(mediaInput).max(40, "Up to 40 photos and videos per product"),
+    imageAxis: z.number().int().min(0).max(1).optional(),
     specs: z.array(z.object({ label: z.string().trim().min(1).max(40), value: z.string().trim().min(1).max(200) })).max(20),
     aPlus: z.array(aPlusInput).max(12),
-    display: z.object({ notes: z.boolean(), profile: z.boolean(), specs: z.boolean() }),
+    display: z.object({ notes: z.boolean(), profile: z.boolean(), specs: z.boolean(), sharedAfterVariant: z.boolean().default(true) }),
     manufacturer: z.string().trim().min(3).max(200),
     packer: text(200),
     countryOfOrigin: z.string().trim().min(2).max(60),
@@ -91,8 +106,12 @@ export const productInput = z
     seoDescription: text(170),
     seoKeywords: z.array(z.string().trim().min(1).max(40)).max(15),
     sortOrder: z.number().int().min(0).max(9999),
+    /** ISO times (or "" for none): go live / be hidden automatically. */
+    publishAt: isoTime,
+    unpublishAt: isoTime,
   })
   .superRefine((p, ctx) => {
+    if (p.publishAt && p.unpublishAt && p.unpublishAt <= p.publishAt) ctx.addIssue({ code: "custom", message: "The take-down time must be after the launch time", path: ["unpublishAt"] });
     if (p.type === "fragrance" && !p.zodiacSign) ctx.addIssue({ code: "custom", message: "A fragrance needs its zodiac sign", path: ["zodiacSign"] });
     if (new Set(p.variants.map((v) => v.sku)).size !== p.variants.length) ctx.addIssue({ code: "custom", message: "Each variant needs its own SKU", path: ["variants"] });
     if (new Set(p.options.map((o) => o.name.toLowerCase())).size !== p.options.length) ctx.addIssue({ code: "custom", message: "Option names must differ", path: ["options"] });
@@ -115,6 +134,20 @@ export const productInput = z
     const mediaIds = new Set(p.media.map((m) => m.id));
     if (p.variants.some((v) => v.mediaIds.some((id) => !mediaIds.has(id)))) ctx.addIssue({ code: "custom", message: "A variant points at a removed image", path: ["variants"] });
     if (p.media.length && p.media[0]!.kind !== "image") ctx.addIssue({ code: "custom", message: "The first (cover) item must be an image", path: ["media"] });
+    if (p.imageAxis !== undefined && !p.options[p.imageAxis]) ctx.addIssue({ code: "custom", message: "Photos are set to follow an option that no longer exists", path: ["imageAxis"] });
+    const skus = new Set(p.variants.map((v) => v.sku));
+    const perVariant = new Map<string, number>();
+    p.media.forEach((m, i) => {
+      if (m.scope.kind === "variant") {
+        if (!skus.has(m.scope.sku)) ctx.addIssue({ code: "custom", message: `A photo belongs to ${m.scope.sku}, which isn't a variant any more`, path: ["media", i] });
+        perVariant.set(m.scope.sku, (perVariant.get(m.scope.sku) ?? 0) + 1);
+      }
+      if (m.scope.kind === "option") {
+        const scope = m.scope;
+        if (scope.axis !== p.imageAxis || !p.options[scope.axis]?.values.includes(scope.value)) ctx.addIssue({ code: "custom", message: `Photos for "${scope.value}" no longer match an option value`, path: ["media", i] });
+      }
+    });
+    for (const [sku, n] of perVariant) if (n > 12) ctx.addIssue({ code: "custom", message: `${sku} has ${n} photos; up to 12 per variant`, path: ["media"] });
   });
 
 export type ProductInput = z.infer<typeof productInput>;

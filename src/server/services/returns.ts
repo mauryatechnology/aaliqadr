@@ -51,14 +51,17 @@ export async function createReturn(
   orderId: string,
   who: { name: string; email: string; userId?: string },
   input: { items: { sku: string; qty: number }[]; reason: ReturnReason; description: string; evidence: { url: string; kind: "image" | "video" }[] },
+  /** Raised by staff for a customer who phoned or emailed (plan.md §5): no window or evidence rule. */
+  staff?: Actor & { userId: string },
 ): Promise<ReturnDoc> {
   await db();
   const o = await Order.findById(orderId).select("+accessKey").lean<OrderDoc>();
   if (!o) throw new ReturnError("Order not found.");
   const window = await claimWindow(o);
-  if (!window.open) throw new ReturnError(o.status === "delivered" ? "The window to report a problem with this order has closed. Please contact us." : "You can report a problem once the order is delivered.");
+  if (staff && !["delivered", "shipped"].includes(o.status)) throw new ReturnError("A claim needs a shipped or delivered order.");
+  if (!staff && !window.open) throw new ReturnError(o.status === "delivered" ? "The window to report a problem with this order has closed. Please contact us." : "You can report a problem once the order is delivered.");
   if (await ReturnRequest.exists({ orderId, status: { $in: OPEN } })) throw new ReturnError("There's already an open request for this order. We'll update you on it soon.");
-  if (input.reason !== "other" && input.reason !== "missing_item" && input.evidence.length === 0) throw new ReturnError("Add at least one photo or the unboxing video.");
+  if (!staff && input.reason !== "other" && input.reason !== "missing_item" && input.evidence.length === 0) throw new ReturnError("Add at least one photo or the unboxing video.");
 
   const items = input.items.map((line) => {
     const item = o.items.find((i) => i.sku === line.sku);
@@ -66,7 +69,7 @@ export async function createReturn(
     return { sku: item.sku, name: item.name, variantLabel: item.variantLabel, qty: Math.min(Math.max(1, line.qty), item.qty), unitPriceP: item.unitPriceP };
   });
   const seq = (await Counter.findOneAndUpdate({ _id: "return" }, { $inc: { seq: 1 } }, { upsert: true, returnDocument: "after" }).lean())!.seq;
-  const actor = { name: who.name, role: "customer", userId: who.userId };
+  const actor = staff ?? { name: who.name, role: "customer", userId: who.userId };
   const doc = await ReturnRequest.create({
     _id: `RT-${100000 + seq}`,
     orderId,
@@ -78,8 +81,9 @@ export async function createReturn(
     description: input.description,
     evidence: input.evidence,
     status: "requested",
-    history: [{ at: new Date(), status: "requested", note: input.description.slice(0, 300), actor, visibleToCustomer: true }],
+    history: [{ at: new Date(), status: "requested", note: `${staff ? "Raised by our team on your behalf: " : ""}${input.description.slice(0, 300)}`, actor, visibleToCustomer: true }],
   });
+  if (staff) await AuditLog.create({ actor: staff, action: "return.create_for_customer", entity: { kind: "return", id: doc._id }, detail: { orderId } });
   const r = doc.toObject() as ReturnDoc;
   after(async () => {
     await sendMail(returnUpdateEmail({ id: r._id, orderId, name: o.contact.name, email: o.contact.email, status: "requested", url: orderLink(o) }));

@@ -53,6 +53,16 @@ export async function migrateCatalog(log: (s: string) => void = console.log) {
       set.variants = p.variants.map((v) => ({ ...v, optionValues: v.optionValues ?? [], mediaIds: v.mediaIds ?? [] }));
     }
     if (p.media?.some((m) => !m.id)) set.media = p.media.map((m) => ({ ...m, id: m.id ?? randomUUID().slice(0, 8), kind: m.kind ?? "image" }));
+    // Per-variant photos (plan.md §8.3): a photo a variant pointed at becomes that variant's own.
+    if (p.variants.some((v) => v.mediaIds?.length)) {
+      const media = ((set.media as typeof p.media) ?? p.media).map((m) => {
+        if (m.scope?.kind && m.scope.kind !== "shared") return m;
+        const owner = p.variants.find((v) => v.mediaIds?.includes(m.id));
+        return owner ? { ...m, scope: { kind: "variant", sku: owner.sku } } : m;
+      });
+      set.media = media;
+      set.variants = ((set.variants as typeof p.variants) ?? p.variants).map((v) => ({ ...v, mediaIds: [] }));
+    }
     if (Object.keys(set).length) {
       await Product.updateOne({ _id: p._id }, { $set: set });
       touched++;

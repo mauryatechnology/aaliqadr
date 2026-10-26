@@ -235,3 +235,51 @@ export function calculateVedicMoon(
     cuspWarning,
   };
 }
+
+/**
+ * Apparent tropical longitude of the Sun (Jean Meeus, low-precision; within ~0.01°), enough
+ * for tithi, which changes every 12° of Moon–Sun elongation.
+ */
+export function getSunTropicalLongitude(t: number): number {
+  const deg2rad = Math.PI / 180;
+  const l0 = 280.46646 + 36000.76983 * t + 0.0003032 * t * t;
+  const m = 357.52911 + 35999.05029 * t - 0.0001537 * t * t;
+  const c =
+    (1.914602 - 0.004817 * t - 0.000014 * t * t) * Math.sin(m * deg2rad) +
+    (0.019993 - 0.000101 * t) * Math.sin(2 * m * deg2rad) +
+    0.000289 * Math.sin(3 * m * deg2rad);
+  const omega = 125.04 - 1934.136 * t;
+  let l = l0 + c - 0.00569 - 0.00478 * Math.sin(omega * deg2rad);
+  l %= 360;
+  if (l < 0) l += 360;
+  return l;
+}
+
+const TITHI_NAMES: readonly string[] = [
+  "Pratipada", "Dwitiya", "Tritiya", "Chaturthi", "Panchami", "Shashthi", "Saptami", "Ashtami",
+  "Navami", "Dashami", "Ekadashi", "Dwadashi", "Trayodashi", "Chaturdashi",
+];
+
+export interface Panchang {
+  /** 1–30 across the lunar month. */
+  tithiNumber: number;
+  tithi: string;
+  paksha: "Shukla" | "Krishna";
+  nakshatra: string;
+}
+
+/**
+ * Tithi and paksha at the given local time, computed on the device: the Moon–Sun elongation
+ * divided into thirty 12° arcs. Nothing is sent anywhere (plan.md §12, option a).
+ */
+export function calculatePanchang(year: number, month: number, day: number, hour = 12, min = 0, tz = 5.5): Panchang {
+  const jd = toJulianDay(year, month, day, hour, min, tz);
+  const t = (jd - 2451545.0) / 36525;
+  let elongation = (getMoonTropicalLongitude(t) - getSunTropicalLongitude(t)) % 360;
+  if (elongation < 0) elongation += 360;
+  const tithiNumber = Math.min(30, Math.floor(elongation / 12) + 1);
+  const paksha = tithiNumber <= 15 ? "Shukla" : "Krishna";
+  const inPaksha = tithiNumber <= 15 ? tithiNumber : tithiNumber - 15;
+  const tithi = inPaksha === 15 ? (paksha === "Shukla" ? "Purnima" : "Amavasya") : TITHI_NAMES[inPaksha - 1]!;
+  return { tithiNumber, tithi, paksha, nakshatra: calculateVedicMoon(year, month, day, hour, min, tz).nakshatra.name };
+}

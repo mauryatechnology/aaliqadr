@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateVedicMoon, CITIES_DATABASE, NAKSHATRAS, toJulianDay } from "@/lib/vedic-astro";
+import { calculatePanchang, calculateVedicMoon, CITIES_DATABASE, getSunTropicalLongitude, NAKSHATRAS, toJulianDay } from "@/lib/vedic-astro";
 
 describe("vedic-astro", () => {
   it("has exactly 27 nakshatras in order with attributes", () => {
@@ -42,5 +42,36 @@ describe("vedic-astro", () => {
     const midnight = calculateVedicMoon(2026, 10, 24, 0, 0, 5.5);
     expect(noon.sign).toBeDefined();
     expect(midnight.sign).toBeDefined();
+  });
+});
+
+describe("panchang (on-device tithi)", () => {
+  it("finds Purnima just before the full moon of 23–24 Apr 2024", () => {
+    // Full moon 2024-04-24 05:19 IST; six hours earlier the Moon is ~177° from the Sun.
+    const p = calculatePanchang(2024, 4, 23, 23, 0, 5.5);
+    expect(p.tithiNumber).toBe(15);
+    expect(p.tithi).toBe("Purnima");
+    expect(p.paksha).toBe("Shukla");
+  });
+
+  it("finds Amavasya just before the new moon of 8 Apr 2024", () => {
+    // New moon 2024-04-08 23:51 IST (total solar eclipse day).
+    const p = calculatePanchang(2024, 4, 8, 17, 30, 5.5);
+    expect(p.tithiNumber).toBe(30);
+    expect(p.tithi).toBe("Amavasya");
+    expect(p.paksha).toBe("Krishna");
+  });
+
+  it("starts the bright half after the new moon", () => {
+    const p = calculatePanchang(2024, 4, 10, 18, 0, 5.5);
+    expect(p.paksha).toBe("Shukla");
+    expect(p.tithiNumber).toBeGreaterThanOrEqual(2);
+    expect(p.tithiNumber).toBeLessThanOrEqual(3);
+  });
+
+  it("keeps the Sun's longitude in range and near the March equinox", () => {
+    const t = (toJulianDay(2024, 3, 20, 8, 36, 5.5) - 2451545) / 36525; // equinox 2024-03-20 03:06 UTC
+    const l = getSunTropicalLongitude(t);
+    expect(Math.min(l, 360 - l)).toBeLessThan(0.1);
   });
 });

@@ -1,3 +1,4 @@
+import { coverFor } from "@/lib/variant-media";
 import type { Element, Note, ZodiacSlug } from "@/config/zodiac";
 import type { Paise } from "@/lib/money";
 import type { ProductOption } from "@/lib/variants";
@@ -38,9 +39,18 @@ export interface Variant {
   maxPerOrder: number;
 }
 
+/**
+ * Who an image belongs to (plan.md §8.3): every variant (shared), one variant, or every variant
+ * with a given value on the product's image axis (e.g. all "Gift box" sizes).
+ */
+export type MediaScope = { kind: "shared" } | { kind: "variant"; sku: string } | { kind: "option"; axis: number; value: string };
+
 export interface MediaItem {
   id: string;
   kind: "image" | "video";
+  scope: MediaScope;
+  /** SHA-256 of the uploaded file, to refuse duplicates. */
+  hash?: string;
   url: string;
   /** Poster frame for videos. */
   posterUrl?: string;
@@ -83,7 +93,9 @@ export interface ProductDTO {
   options: ProductOption[];
   specs: { label: string; value: string }[];
   aPlus: APlusBlock[];
-  display: { notes: boolean; profile: boolean; specs: boolean };
+  display: { notes: boolean; profile: boolean; specs: boolean; sharedAfterVariant: boolean };
+  /** Index of the option whose values have their own photos (e.g. Edition); none = per variant. */
+  imageAxis?: number;
   zodiacSign?: ZodiacSlug;
   element?: Element;
   concentration?: "extrait" | "edp" | "edt";
@@ -120,8 +132,19 @@ export interface ProductDTO {
 
 export type ProductCardDTO = Pick<
   ProductDTO,
-  "id" | "slug" | "type" | "name" | "tagline" | "zodiacSign" | "element" | "noteFamilies" | "media" | "ratingAvg" | "ratingCount" | "categoryId" | "tags" | "badges" | "salesCount" | "createdAt" | "sortOrder"
-> & { fromPriceP: Paise; fromMrpP: Paise; inStock: boolean; optionCount: number; defaultSku?: string };
+  "id" | "slug" | "type" | "name" | "tagline" | "zodiacSign" | "element" | "noteFamilies" | "media" | "ratingAvg" | "ratingCount" | "categoryId" | "tags" | "badges" | "salesCount" | "createdAt" | "sortOrder" | "concentration"
+> & {
+  /** Bottle sizes of the active variants, for the size facet (plan.md §9.3). */
+  sizesMl: number[];
+  fromPriceP: Paise;
+  fromMrpP: Paise;
+  inStock: boolean;
+  optionCount: number;
+  /** First in-stock active variant (cheapest first): what quick add uses for single-variant products. */
+  defaultSku?: string;
+  /** Active variants for the card's size sheet (plan.md §10.5). */
+  quickVariants: { sku: string; label: string; priceP: Paise; mrpP: Paise; inStock: boolean; maxPerOrder: number; stock: number; image?: { url: string; alt: string; blurDataURL?: string } }[];
+};
 
 export function toCard(p: ProductDTO): ProductCardDTO {
   const active = p.variants.filter((v) => v.isActive);
@@ -144,11 +167,19 @@ export function toCard(p: ProductDTO): ProductCardDTO {
     salesCount: p.salesCount,
     createdAt: p.createdAt,
     sortOrder: p.sortOrder,
+    concentration: p.concentration,
+    sizesMl: [...new Set(active.map((v) => v.volumeMl ?? 0).filter((ml) => ml > 0))],
     optionCount: active.length,
     fromPriceP: cheapest?.priceP ?? 0,
     fromMrpP: cheapest?.mrpP ?? 0,
     inStock: active.some((v) => v.stock > 0),
-    defaultSku: cheapest?.sku,
+    defaultSku: active.toSorted((a, b) => a.priceP - b.priceP).find((v) => v.stock > 0)?.sku,
+    quickVariants: active.map((v) => {
+      // The variant's own cover, when it differs from the card's (card swatches, plan.md §10.1).
+      const cover = coverFor(p, v.sku);
+      const image = cover && cover.id !== p.media.find((m) => m.kind === "image")?.id ? { url: cover.url, alt: cover.alt, blurDataURL: cover.blurDataURL } : undefined;
+      return { sku: v.sku, label: v.label, priceP: v.priceP, mrpP: v.mrpP, inStock: v.stock > 0, maxPerOrder: v.maxPerOrder, stock: Math.max(0, v.stock), image };
+    }),
   };
 }
 

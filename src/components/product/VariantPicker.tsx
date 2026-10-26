@@ -1,11 +1,14 @@
 "use client";
 
+import { getImageProps } from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Check, ShoppingBag } from "lucide-react";
 import { cart } from "@/lib/cart-store";
 import { formatPrice, pricePerMl } from "@/lib/money";
 import { isAvailable, resolveVariant, type ProductOption } from "@/lib/variants";
-import { cn } from "@/lib/cn";
+import { cx as cn } from "@/lib/cx";
+import { coverFor } from "@/lib/variant-media";
+import type { MediaItem } from "@/server/catalog/types";
 import { Price } from "./Price";
 import { useProductState } from "./ProductState";
 
@@ -14,8 +17,21 @@ import { useProductState } from "./ProductState";
  * or are switched off can't be picked; sold-out ones can be picked and say so. On phones a
  * compact bar sticks to the bottom once the main button scrolls away.
  */
-export function VariantPicker({ slug, name, options }: { slug: string; name: string; options: ProductOption[] }) {
+export function VariantPicker({ slug, name, options, media = [], imageAxis, sharedAfterVariant = true }: { slug: string; name: string; options: ProductOption[]; media?: MediaItem[]; imageAxis?: number; sharedAfterVariant?: boolean }) {
   const { variants, sku, select } = useProductState();
+  const mediaSource = { media, variants, imageAxis, display: { sharedAfterVariant } };
+  const preloaded = useRef(new Set<string>());
+  /** Warm the cache for a variant's cover before it's picked (hover/focus), at the gallery's sizes. */
+  const preload = (variantSku?: string) => {
+    const m = variantSku ? coverFor(mediaSource, variantSku) : undefined;
+    if (!m || m.url.endsWith(".svg") || preloaded.current.has(m.url)) return;
+    preloaded.current.add(m.url);
+    const { props } = getImageProps({ src: m.url, alt: "", width: m.width, height: m.height, sizes: "(min-width: 1024px) 50vw, 100vw", quality: 85 });
+    const img = new window.Image();
+    if (props.sizes) img.sizes = props.sizes;
+    if (props.srcSet) img.srcset = props.srcSet;
+    img.src = props.src;
+  };
   const active = variants.filter((v) => v.isActive);
   const selected = active.find((v) => v.sku === sku);
   const [added, setAdded] = useState(false);
@@ -67,6 +83,8 @@ export function VariantPicker({ slug, name, options }: { slug: string; name: str
               const match = options.length ? resolveVariant(active, valuesOf(selected).map((x, i) => (i === a ? value : x)), a) : active.find((v) => v.label === value);
               const out = !!match && match.stock <= 0 && match.optionValues[a] === value;
               const showMl = a === 0 && match && match.volumeMl > 0 && /ml/i.test(value);
+              // Image swatch on the axis that drives photos (e.g. Edition).
+              const swatch = imageAxis === a && match ? coverFor(mediaSource, match.sku) : undefined;
               return (
                 <button
                   key={value}
@@ -75,9 +93,15 @@ export function VariantPicker({ slug, name, options }: { slug: string; name: str
                   aria-checked={on}
                   disabled={!exists}
                   onClick={() => pick(a, value)}
+                  onPointerEnter={() => preload(match?.sku)}
+                  onFocus={() => preload(match?.sku)}
                   className={cn("flex min-w-24 flex-col items-start rounded-xl border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-35", out && !on && "opacity-60")}
                   style={{ borderColor: on ? "var(--z-primary)" : "var(--glass-border)", background: on ? "color-mix(in oklab, var(--z-primary) 14%, transparent)" : "transparent" }}
                 >
+                  {swatch && !swatch.url.endsWith(".svg") && (
+                    // eslint-disable-next-line @next/next/no-img-element -- 28px swatch from the variant's cover; next/image would request an extra size
+                    <img src={getImageProps({ src: swatch.url, alt: "", width: 96, height: 96, quality: 60 }).props.src} alt="" width={28} height={28} className="mb-1.5 size-7 rounded-md object-cover" loading="lazy" />
+                  )}
                   <span className={cn("text-sm font-medium", out && "line-through decoration-1")}>{value}</span>
                   {showMl ? <span className="text-xs text-muted">{formatPrice(pricePerMl(match.priceP, match.volumeMl))}/ml</span> : out ? <span className="text-xs text-muted">Sold out</span> : null}
                 </button>

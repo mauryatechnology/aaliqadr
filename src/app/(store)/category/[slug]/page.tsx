@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import type { Route } from "next";
 import { notFound } from "next/navigation";
 import { breadcrumbLd, collectionPageLd, JsonLd } from "@/lib/jsonld";
 import { routes } from "@/lib/routes";
 import { SEED_CATEGORIES } from "@/server/catalog/seed";
 import { getCategories, getCategoryCards } from "@/server/queries/catalog";
 import { PageHero } from "@/components/layout/PageHero";
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { FacetedSection } from "@/components/listing/FacetedSection";
 
 // Every category is prerendered; its products are the URL's content.
 export const instant = false;
@@ -29,7 +28,7 @@ export async function generateMetadata({ params }: PageProps<"/category/[slug]">
   return { title, description, alternates: { canonical: `/category/${slug}` }, openGraph: { title, description, url: `/category/${slug}`, ...(category.image ? { images: [category.image.url] } : {}) } };
 }
 
-export default async function CategoryPage({ params }: PageProps<"/category/[slug]">) {
+export default async function CategoryPage({ params, searchParams }: PageProps<"/category/[slug]">) {
   const { slug } = await params;
   const data = await getCategoryCards(slug);
   if (!data) notFound();
@@ -61,11 +60,7 @@ export default async function CategoryPage({ params }: PageProps<"/category/[slu
             ))}
           </nav>
         )}
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <p className="text-muted">{cards.length} {cards.length === 1 ? "product" : "products"}</p>
-          <Link href={`/shop?category=${category.slug}` as Route} className="underline underline-offset-4 hover:text-accent">Filter & sort</Link>
-        </div>
-        {cards.length ? <ProductGrid items={cards} /> : <p className="text-muted">New pieces are on their way. <Link href="/shop" className="underline underline-offset-4">Browse everything</Link>.</p>}
+        {cards.length ? <FacetedSection cards={cards} base={`/category/${slug}`} searchParams={searchParams} hide={children.length ? [] : ["category"]} /> : <p className="text-muted">New pieces are on their way. <Link href="/shop" className="underline underline-offset-4">Browse everything</Link>.</p>}
       </div>
       <JsonLd data={collectionPageLd({ name: category.name, description: category.description, path: `/category/${slug}`, items: cards.map((c) => ({ name: c.name, path: `/perfume/${c.slug}`, image: c.media[0]?.url })) })} />
       <JsonLd data={breadcrumbLd([{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }, ...trail.map((t) => ({ name: t.name, path: `/category/${t.slug}` })), { name: category.name, path: `/category/${slug}` }])} />

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Check, FileText, Package, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/money";
@@ -87,8 +88,8 @@ export function OrderDetails({ order, accessKey, showKeyInLinks }: { order: Orde
           <ul className="flex flex-col divide-y divide-white/10">
             {order.items.map((i) => (
               <li key={i.sku} className="flex items-center gap-4 py-4" data-zodiac={i.zodiacSign}>
-                <div className="grid h-20 w-16 shrink-0 place-items-center rounded-lg p-1" style={{ background: "radial-gradient(circle at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
-                  <BottleArt sign={i.zodiacSign} className="h-full w-auto" />
+                <div className="relative grid h-20 w-16 shrink-0 place-items-center overflow-hidden rounded-lg p-1" style={{ background: "radial-gradient(circle at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
+                  {i.image ? <Image src={i.image} alt={`${i.name}, ${i.variantLabel}`} fill sizes="64px" className="object-cover" /> : <BottleArt sign={i.zodiacSign} className="h-full w-auto" />}
                 </div>
                 <div className="flex flex-1 flex-col">
                   <span className="font-display text-xl">{i.name}</span>

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { formatPrice } from "@/lib/money";
@@ -52,7 +51,13 @@ export function RecentlyViewed({ current }: { current: Seen }) {
           <li key={p.slug} className="w-40 shrink-0">
             <Link href={routes.product(p.slug)} data-zodiac={p.sign} className="group flex flex-col gap-2">
               <span className="surface relative block aspect-[4/5] overflow-clip" style={{ background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
-                {p.image ? <Image src={p.image} alt="" fill sizes="160px" className="object-cover" /> : <Image src={`/bottles/${p.sign ?? "brand"}.svg`} alt="" fill sizes="160px" unoptimized className="object-contain p-5" />}
+                {p.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.image} alt="" className="absolute inset-0 size-full object-cover" loading="lazy" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`/bottles/${p.sign ?? "brand"}.svg`} alt="" className="absolute inset-0 size-full object-contain p-5" loading="lazy" />
+                )}
               </span>
               <span className="truncate text-sm group-hover:text-accent">{p.name}</span>
               <span className="text-muted text-xs">{formatPrice(p.priceP)}</span>

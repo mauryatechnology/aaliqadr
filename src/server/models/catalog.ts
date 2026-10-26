@@ -110,3 +110,42 @@ const HsnCodeSchema = new Schema<HsnCodeDoc>(
 );
 HsnCodeSchema.index({ code: 1 }, { unique: true });
 export const HsnCode = model<HsnCodeDoc>("HsnCode", HsnCodeSchema);
+
+// ── Product revisions: every saved version, for history and restore (append-only) ─
+export interface ProductRevisionDoc {
+  _id: Types.ObjectId;
+  productId: Types.ObjectId;
+  /** The editor input that was saved (no stock or costs). */
+  value: unknown;
+  status: string;
+  savedBy: { userId: string; name: string; role: string };
+  createdAt: Date;
+}
+const ProductRevisionSchema = new Schema<ProductRevisionDoc>(
+  {
+    productId: { type: Schema.Types.ObjectId, required: true },
+    value: { type: Schema.Types.Mixed, required: true },
+    status: String,
+    savedBy: { userId: String, name: String, role: String },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+ProductRevisionSchema.index({ productId: 1, createdAt: -1 });
+export const ProductRevision = model<ProductRevisionDoc>("ProductRevision", ProductRevisionSchema);
+
+// ── Product drafts: unpublished edits to a live product (one per product) ─────
+export interface ProductDraftDoc {
+  _id: Types.ObjectId;
+  value: unknown;
+  savedBy: { userId: string; name: string; role: string };
+  updatedAt: Date;
+}
+const ProductDraftSchema = new Schema<ProductDraftDoc>(
+  {
+    _id: { type: Schema.Types.ObjectId, required: true },
+    value: { type: Schema.Types.Mixed, required: true },
+    savedBy: { userId: String, name: String, role: String },
+  },
+  { timestamps: { createdAt: false, updatedAt: true } },
+);
+export const ProductDraft = model<ProductDraftDoc>("ProductDraft", ProductDraftSchema);

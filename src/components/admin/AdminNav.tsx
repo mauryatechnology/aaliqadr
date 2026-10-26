@@ -5,13 +5,16 @@ import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import { useState } from "react";
 import {
+  Activity,
   BarChart3,
   Boxes,
   FileText,
   FolderTree,
   LayoutDashboard,
   Layers,
+  Mail,
   Menu,
+  MessageCircleQuestion,
   MessageSquare,
   Megaphone,
   Package,
@@ -53,6 +56,7 @@ const GROUPS = (badges: AdminBadges): { title?: string; items: Item[] }[] => [
     items: [
       { href: "/admin/customers", label: "Customers", Icon: Users },
       { href: "/admin/reviews", label: "Reviews", Icon: MessageSquare, badge: badges.reviews },
+      { href: "/admin/questions", label: "Questions", Icon: MessageCircleQuestion, badge: badges.questions },
     ],
   },
   {
@@ -75,6 +79,8 @@ const GROUPS = (badges: AdminBadges): { title?: string; items: Item[] }[] => [
     items: [
       { href: "/admin/staff", label: "Staff & roles", Icon: ShieldCheck, min: "owner" },
       { href: "/admin/settings", label: "Settings", Icon: Settings, min: "admin" },
+      { href: "/admin/health", label: "System health", Icon: Activity, min: "admin" },
+      { href: "/admin/email-preview", label: "Email templates", Icon: Mail, min: "admin" },
       { href: "/admin/audit", label: "Activity log", Icon: FileText, min: "admin" },
     ],
   },
@@ -86,6 +92,7 @@ export interface AdminBadges {
   toShip: number;
   returns: number;
   reviews: number;
+  questions?: number;
 }
 
 export function AdminNav({ role, badges = { toShip: 0, returns: 0, reviews: 0 } }: { role: "staff" | "admin" | "owner"; badges?: AdminBadges }) {
@@ -134,9 +141,15 @@ export function AdminNav({ role, badges = { toShip: 0, returns: 0, reviews: 0 } 
           {open ? <X className="size-4" /> : <Menu className="size-4" />} Menu
         </button>
         {open && (
-          <nav aria-label="Admin" className="absolute inset-x-4 z-30 mt-2 max-h-[75dvh] overflow-y-auto rounded-xl border border-neutral-200 bg-white p-3 shadow-lg">
-            {list}
-          </nav>
+          <div className="fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Admin menu" onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
+            <button type="button" aria-label="Close menu" className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
+            <nav aria-label="Admin" className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white p-3 shadow-xl">
+              <button type="button" onClick={() => setOpen(false)} className="mb-3 flex h-9 items-center gap-2 self-end rounded-lg px-2 text-sm text-neutral-600 hover:bg-neutral-100">
+                <X className="size-4" /> Close
+              </button>
+              {list}
+            </nav>
+          </div>
         )}
       </div>
     </>

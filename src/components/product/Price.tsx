@@ -1,5 +1,5 @@
 import { discountPercent, formatPrice, type Paise } from "@/lib/money";
-import { cn } from "@/lib/cn";
+import { cx as cn } from "@/lib/cx";
 
 export function Price({ priceP, mrpP, from = false, className }: { priceP: Paise; mrpP?: Paise; from?: boolean; className?: string }) {
   const off = mrpP ? discountPercent(mrpP, priceP) : 0;

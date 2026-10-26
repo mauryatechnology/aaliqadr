@@ -136,8 +136,10 @@ export function MapLocationPicker({
         center: [initialLat, initialLng],
         zoom: 7,
         zoomControl: true,
-        attributionControl: false,
+        // Tile providers require visible attribution (plan.md F5).
+        attributionControl: true,
       });
+      map.attributionControl.setPrefix(false);
 
       // 100% reliable tile layer (OpenStreetMap / Carto) with fallback
       const tileUrl =
@@ -147,7 +149,14 @@ export function MapLocationPicker({
             ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 
+      const attribution =
+        mapTheme === "satellite"
+          ? "Tiles &copy; Esri"
+          : mapTheme === "standard"
+            ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
       L.tileLayer(tileUrl, {
+        attribution,
         maxZoom: 19,
         subdomains: mapTheme === "satellite" ? "" : mapTheme === "standard" ? "abc" : "abcd",
       }).addTo(map);
@@ -424,6 +433,9 @@ export function MapLocationPicker({
 
         {/* Footer with Selected Location & Confirmation */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10 bg-surface/80 p-4">
+          <div aria-live="polite" className="sr-only">
+            {pickedLocation.name ? `${pickedLocation.name} selected at ${pickedLocation.lat.toFixed(2)}°N, ${pickedLocation.lng.toFixed(2)}°E` : "Selecting location"}
+          </div>
           <div className="flex items-center gap-2.5">
             <Navigation className="size-4 shrink-0 text-gold" />
             <div>

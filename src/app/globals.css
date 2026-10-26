@@ -3,6 +3,9 @@
 
 /* ── Brand defaults (neutral pages). Zodiac scopes override the --z-* layer. ── */
 :root {
+  /* Admin table density (plan.md §2.1): compact by default, toggled per browser. */
+  --adm-px: 0.75rem;
+  --adm-py: 0.5rem;
   --z-bg: #0b0a0f;
   --z-surface: #14121c;
   --z-primary: #c4a044;
@@ -468,4 +471,31 @@ html[data-perf="lite"] .surface { backdrop-filter: none; background: var(--color
     scroll-behavior: auto !important;
   }
   .aurora { animation: none; }
+}
+
+/* Crossfade when the product gallery switches to another variant's photos. */
+@keyframes aq-fade {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="aq-fade"] {
+    animation: none !important;
+  }
+}
+
+:root[data-density="comfortable"] {
+  --adm-px: 1rem;
+  --adm-py: 0.75rem;
+}
+
+/* Keyboard-selected row in admin lists (j / k). */
+main tr[data-kbd] > td,
+main [data-list-row][data-kbd] {
+  background: rgb(14 165 233 / 0.08);
+  box-shadow: inset 2px 0 0 rgb(14 165 233);
 }

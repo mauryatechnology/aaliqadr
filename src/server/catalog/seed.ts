@@ -79,7 +79,7 @@ const extras = (categoryId: string, badges: ProductDTO["badges"] = [], tags: str
   options: [] as ProductDTO["options"],
   specs: [] as ProductDTO["specs"],
   aPlus: [] as ProductDTO["aPlus"],
-  display: { notes: true, profile: true, specs: true },
+  display: { notes: true, profile: true, specs: true, sharedAfterVariant: true },
   createdAt: SEED_DATE,
 });
 
@@ -142,6 +142,7 @@ function fragrance(sign: ZodiacSign): ProductDTO {
       {
         id: `bottle-${sign.slug}`,
         kind: "image",
+        scope: { kind: "shared" },
         url: `/bottles/${sign.slug}.svg`,
         alt: `${f.name}, the ${sign.name} (${sign.rashi}) luxury perfume bottle`,
         width: 720,
@@ -178,6 +179,7 @@ const discoveryCoffret: ProductDTO = {
     {
       id: "bottle-discovery-coffret",
       kind: "image",
+      scope: { kind: "shared" },
       url: "/bottles/brand.svg",
       alt: "Zodiac Discovery Coffret 12-sign luxury fragrance coffret",
       width: 720,
@@ -215,6 +217,7 @@ const elementTrios: ProductDTO[] = ELEMENTS.map((el, i) => {
       {
         id: `bottle-trio-${el}`,
         kind: "image",
+        scope: { kind: "shared" },
         url: `/bottles/${info.signs[0]}.svg`,
         alt: `${info.label} Element Trio luxury perfume set`,
         width: 720,

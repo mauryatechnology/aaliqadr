@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Suspense } from "react";
 import { adminUser } from "@/server/admin/guard";
-import { salesReport } from "@/server/admin/ops";
+import { salesReport, searchReport } from "@/server/admin/ops";
 import { formatPrice } from "@/lib/money";
 import { cn } from "@/lib/cn";
 import { AdminSkeleton, btnSecondary, Card, Empty, inputCls, PageHeader, Stat, Table, td, th } from "@/components/admin/ui";
@@ -47,7 +47,7 @@ async function AdminReports({ searchParams }: PageProps<"/admin/reports">) {
   const preset = typeof sp.range === "string" && sp.range in p ? (sp.range as keyof typeof p) : isDate(sp.from) && isDate(sp.to) ? null : "month";
   const from = preset ? p[preset].from : (sp.from as string);
   const to = preset ? p[preset].to : ymd(new Date(istMidnight(sp.to as string).getTime() + 86_400_000));
-  const r = await salesReport(istMidnight(from), istMidnight(to));
+  const [r, s] = await Promise.all([salesReport(istMidnight(from), istMidnight(to)), searchReport(istMidnight(from), istMidnight(to))]);
   const t = r.totals;
   const tax = t.cgstP + t.sgstP + t.igstP;
   const file = (k: string) => `aaliqadr-${k}-${from}-to-${to}.csv`;
@@ -129,6 +129,24 @@ async function AdminReports({ searchParams }: PageProps<"/admin/reports">) {
           </details>
         </div>
       )}
+      <Card title="What shoppers search for" className="mt-6">
+        <div className="mb-4 grid grid-cols-3 gap-4 text-sm">
+          <div><p className="text-neutral-500">Searches</p><p className="text-xl font-semibold tabular-nums">{s.searches}</p></div>
+          <div><p className="text-neutral-500">Clicked a result</p><p className="text-xl font-semibold tabular-nums">{s.searches ? `${Math.round((s.clicks / s.searches) * 100)}%` : "—"}</p></div>
+          <div><p className="text-neutral-500">Search → add to bag</p><p className="text-xl font-semibold tabular-nums">{s.searches ? `${Math.round((s.adds / s.searches) * 100)}%` : "—"}</p></div>
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div>
+            <p className="mb-2 text-sm font-medium">Top searches</p>
+            {s.top.length === 0 ? <p className="text-sm text-neutral-500">No searches in this period.</p> : <ol className="flex flex-col gap-1 text-sm">{s.top.map((x) => <li key={x._id} className="flex justify-between gap-3"><span>{x._id}</span><span className="tabular-nums text-neutral-500">{x.n} · {Math.round(x.avgResults ?? 0)} results</span></li>)}</ol>}
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-medium">Searches with no results</p>
+            {s.zero.length === 0 ? <p className="text-sm text-neutral-500">None: every search found something.</p> : <ol className="flex flex-col gap-1 text-sm">{s.zero.map((x) => <li key={x._id} className="flex justify-between gap-3"><span>{x._id}</span><span className="tabular-nums text-neutral-500">{x.n}</span></li>)}</ol>}
+            <p className="mt-2 text-xs text-neutral-500">Add a synonym in Content › Search, or a product, for the ones that matter.</p>
+          </div>
+        </div>
+      </Card>
     </>
   );
 }

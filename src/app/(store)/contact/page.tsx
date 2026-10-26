@@ -3,6 +3,7 @@ import Link from "next/link";
 import { site } from "@/config/site";
 import { PageHero } from "@/components/layout/PageHero";
 import { breadcrumbLd, JsonLd, organizationLd } from "@/lib/jsonld";
+import { getBusiness } from "@/server/queries/business";
 
 export const metadata: Metadata = {
   title: "Contact Customer Care & Concierge | Aaliqadr",
@@ -22,7 +23,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const b = await getBusiness();
   return (
     <>
       <PageHero eyebrow="Customer care" title="We're here to help" />
@@ -30,17 +32,17 @@ export default function ContactPage() {
         <div className="surface grid grid-cols-1 gap-6 p-8 sm:grid-cols-2">
           <div>
             <h2 className="eyebrow mb-2">Call or WhatsApp</h2>
-            <a href={`tel:${site.support.phone.replace(/\s/g, "")}`} className="font-display hover:text-gold text-2xl">
-              {site.support.phone}
+            <a href={`tel:${b.supportPhone.replace(/\s/g, "")}`} className="font-display hover:text-gold text-2xl">
+              {b.supportPhone}
             </a>
             <p className="text-muted mt-1 text-sm">{site.support.hours}</p>
           </div>
           <div>
             <h2 className="eyebrow mb-2">Registered office</h2>
             <p className="text-muted text-sm leading-relaxed">
-              {site.legal.legalName}
+              {b.legalName}
               <br />
-              {site.legal.address}
+              {b.address}
             </p>
           </div>
         </div>

@@ -29,7 +29,7 @@ async function AdminContent() {
     <>
       <PageHeader title="Content" description="Announcement bar, home banners, FAQs and policies. Changes go live as soon as you publish." />
       <ContentEditor
-        initial={{ announcement: content.announcement, banners: content.banners, faqs: content.faqs }}
+        initial={{ announcement: content.announcement, banners: content.banners, faqs: content.faqs, search: content.search }}
         policies={policies}
         history={Object.fromEntries(Object.entries(history).map(([k, v]) => [k, v.map((h) => ({ ...h, at: new Date(h.at).toISOString() }))]))}
       />

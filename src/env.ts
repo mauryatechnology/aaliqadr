@@ -65,6 +65,16 @@ const schema = z.object({
   SMTP_USER: str,
   SMTP_PASS: str,
   EMAIL_FROM: str,
+  /** Transactional email over Resend's API instead of SMTP, once the brand domain is verified (plan.md §13.4). */
+  RESEND_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-resend-key")),
+  /** Slack / Discord / Google Chat incoming webhook for operational alerts (plan.md §13.2). */
+  ALERT_WEBHOOK_URL: z
+    .string()
+    .optional()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-alert-webhook")),
   SUPPORT_EMAIL: z.email(),
   /** Signs in as owner the first time (docs/06 §3); everyone else starts as a customer. */
   ADMIN_EMAIL: z.email(),
@@ -100,6 +110,8 @@ export const env: Env = parsed.data;
 const OPTIONAL_IN_PRODUCTION: EnvKey[] = [
   "SENTRY_DSN",
   "NEXT_PUBLIC_SENTRY_DSN",
+  "RESEND_API_KEY",
+  "ALERT_WEBHOOK_URL",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   // Shipping falls back to manual courier + AWB entry in admin.

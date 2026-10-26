@@ -1,7 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Printer } from "lucide-react";
+import { ExternalLink, Printer } from "lucide-react";
 import { formatPrice } from "@/lib/money";
 import { PAYMENT_LABEL, STATUS_LABEL } from "@/lib/order-status";
 import { routes } from "@/lib/routes";
@@ -11,6 +12,10 @@ import { getAdminOrder } from "@/server/admin/queries";
 import { AdminSkeleton, Badge, Card, PageHeader, STATUS_TONE } from "@/components/admin/ui";
 import { adminDate } from "@/components/admin/format";
 import { OrderAdminActions, OrderNoteForm } from "@/components/admin/OrderAdminActions";
+import { EditDeliveryButton, PartialRefundButton } from "@/components/admin/OrderEdits";
+import { AdminClaimButton } from "@/components/admin/ops/AdminClaim";
+import { Breadcrumbs } from "@/components/admin/kit/Layout";
+import { CopyButton, RelativeTime } from "@/components/admin/kit/Bits";
 
 export const metadata = { title: "Order" };
 
@@ -33,7 +38,7 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
 
   return (
     <>
-      <Link href="/admin/orders" className="mb-3 inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="size-4" /> Orders</Link>
+      <Breadcrumbs items={[{ label: "Orders", href: "/admin/orders" }, { label: o._id }]} />
       <PageHeader
         title={`Order ${o._id}`}
         description={`Placed ${adminDate.format(new Date(o.createdAt))} by ${o.contact.name}`}
@@ -50,7 +55,12 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
             <ul className="divide-y divide-neutral-100">
               {o.items.map((i) => (
                 <li key={i.sku} className="flex items-center justify-between gap-4 py-3 text-sm">
-                  <div><p className="font-medium">{i.name} · {i.variantLabel}</p><p className="text-xs text-neutral-500">{i.sku} · HSN {i.hsnCode}</p></div>
+                  <div className="flex items-center gap-3">
+                    <span className="relative size-11 shrink-0 overflow-hidden rounded-md bg-neutral-100">
+                      <Image src={i.image ?? `/bottles/${i.zodiacSign ?? "brand"}.svg`} alt="" fill sizes="44px" unoptimized={!i.image} className={i.image ? "object-cover" : "object-contain p-0.5"} />
+                    </span>
+                    <div><p className="font-medium">{i.name} · {i.variantLabel}</p><p className="text-xs text-neutral-500">{i.sku} · HSN {i.hsnCode}</p></div>
+                  </div>
                   <p className="tabular-nums">{i.qty} × {formatPrice(i.unitPriceP)}</p>
                   <p className="w-24 text-right font-medium tabular-nums">{formatPrice(i.lineTotalP - i.discountP)}</p>
                 </li>
@@ -71,11 +81,24 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card title="Customer">
               <p className="font-medium">{o.contact.name}</p>
-              <p className="text-sm text-neutral-600">{o.contact.email}</p>
-              <p className="text-sm text-neutral-600">{o.contact.phone}</p>
+              <p className="flex items-center gap-1 text-sm text-neutral-600">{o.contact.email} <CopyButton value={o.contact.email} label="Copy email" /></p>
+              <p className="flex items-center gap-1 text-sm text-neutral-600">{o.contact.phone} <CopyButton value={o.contact.phone} label="Copy phone" /></p>
               <p className="mt-2 text-xs text-neutral-500">{o.userId ? "Signed-in customer" : "Guest checkout"}</p>
             </Card>
-            <Card title="Ship to">
+            <Card
+              title="Ship to"
+              actions={
+                ["pending_payment", "confirmed", "processing"].includes(o.status) ? (
+                  <EditDeliveryButton
+                    orderId={o._id}
+                    address={{ fullName: o.shippingAddress.fullName, phone: o.shippingAddress.phone.replace(/^\+91/, ""), line1: o.shippingAddress.line1, line2: o.shippingAddress.line2 ?? "", landmark: o.shippingAddress.landmark ?? "", city: o.shippingAddress.city, stateCode: o.shippingAddress.stateCode, pincode: o.shippingAddress.pincode }}
+                    giftMessage={o.gift.message}
+                    giftWrap={o.gift.wrap}
+                    stateLocked={!!o.invoice?.number}
+                  />
+                ) : undefined
+              }
+            >
               <address className="text-sm not-italic leading-relaxed">
                 <span className="font-medium">{o.shippingAddress.fullName}</span> · {o.shippingAddress.phone}<br />
                 {o.shippingAddress.line1}{o.shippingAddress.line2 && `, ${o.shippingAddress.line2}`}<br />
@@ -86,14 +109,19 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
             </Card>
           </div>
 
-          <Card title="Timeline">
+          <Card title="Activity">
             <ol className="flex flex-col gap-3 text-sm">
-              {[...o.history].reverse().map((h, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-neutral-400" aria-hidden />
-                  <div><p>{h.note ?? h.status} {!h.visibleToCustomer && <Badge>internal</Badge>}</p><p className="text-xs text-neutral-500">{adminDate.format(new Date(h.at))} · {h.actor.name}</p></div>
-                </li>
-              ))}
+              {[
+                ...o.history.map((h) => ({ at: new Date(h.at), text: h.note ?? h.status, who: h.actor.name, tag: h.visibleToCustomer ? undefined : "internal" })),
+                ...audit.filter((a) => !["order.advance", "order.cancel"].includes(a.action)).map((a) => ({ at: new Date(a.createdAt ?? 0), text: a.action.replace(/^order\./, "").replaceAll("_", " "), who: a.actor.name, tag: "audit" })),
+              ]
+                .sort((a, b) => b.at.getTime() - a.at.getTime())
+                .map((h, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="mt-1.5 size-2 shrink-0 rounded-full bg-neutral-400" aria-hidden />
+                    <div><p>{h.text} {h.tag && <Badge>{h.tag}</Badge>}</p><p className="text-xs text-neutral-500"><span title={adminDate.format(h.at)}><RelativeTime date={h.at} /></span> · {h.who}</p></div>
+                  </li>
+                ))}
             </ol>
           </Card>
         </div>
@@ -106,9 +134,17 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
               <OrderAdminActions orderId={o._id} status={o.status} canCancel={hasRole(user, "admin")} paidOnline={o.payment.method === "razorpay" && o.payment.status === "paid"} />
             )}
           </Card>
+          {(o.status === "delivered" || o.status === "shipped" || (o.payment.status !== "pending" && o.payment.refundedP < o.pricing.totalP)) && (
+            <Card title="After-sales">
+              <div className="flex flex-col gap-2">
+                {hasRole(user, "admin") && ["paid", "partially_refunded"].includes(o.payment.status) && o.payment.refundedP < o.pricing.totalP && <PartialRefundButton orderId={o._id} refundableP={o.pricing.totalP - o.payment.refundedP} cod={o.payment.method === "cod"} />}
+                {(o.status === "delivered" || o.status === "shipped") && <AdminClaimButton orderId={o._id} />}
+              </div>
+            </Card>
+          )}
           {o.shipment?.awb && (
             <Card title="Shipment">
-              <p className="text-sm">{o.shipment.courier} · <span className="font-mono">{o.shipment.awb}</span></p>
+              <p className="flex items-center gap-1 text-sm">{o.shipment.courier} · <span className="font-mono">{o.shipment.awb}</span> <CopyButton value={o.shipment.awb} label="Copy AWB" /></p>
               {o.shipment.trackingUrl && <a href={o.shipment.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm underline">Track <ExternalLink className="size-3.5" /></a>}
             </Card>
           )}
@@ -128,11 +164,6 @@ async function AdminOrder({ params }: PageProps<"/admin/orders/[id]">) {
             {o.notesInternal && <pre className="mb-3 whitespace-pre-wrap font-sans text-sm text-neutral-700">{o.notesInternal}</pre>}
             <OrderNoteForm orderId={o._id} />
           </Card>
-          {audit.length > 0 && (
-            <Card title="Audit">
-              <ul className="flex flex-col gap-1 text-xs text-neutral-600">{audit.map((a, i) => <li key={i}>{a.action} · {a.actor.name} · {a.createdAt ? adminDate.format(new Date(a.createdAt)) : ""}</li>)}</ul>
-            </Card>
-          )}
         </div>
       </div>
     </>

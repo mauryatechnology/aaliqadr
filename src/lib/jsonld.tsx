@@ -11,6 +11,7 @@ import type {
 } from "schema-dts";
 import { site } from "@/config/site";
 import { ZODIAC } from "@/config/zodiac";
+import { imagesFor } from "@/lib/variant-media";
 import type { ProductDTO } from "@/server/catalog/types";
 import { toDecimalString } from "./money";
 
@@ -143,7 +144,7 @@ export function productLd(p: ProductDTO): WithContext<ProductGroup> | WithContex
       name: `${p.name} — ${v.label}`,
       ...(sizeAxis >= 0 && v.optionValues[sizeAxis] ? { size: v.optionValues[sizeAxis] } : p.options.length === 0 ? { size: v.label } : {}),
       image: (() => {
-        const own = v.mediaIds.map((id) => photos.find((m) => m.id === id)?.url).filter((u): u is string => !!u);
+        const own = imagesFor(p, v.sku).filter((m) => m.kind === "image").map((m) => m.url);
         return own.length ? own : images;
       })(),
       category: "Health & Beauty > Personal Care > Cosmetics > Perfumes & Fragrances",

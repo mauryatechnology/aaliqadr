@@ -117,7 +117,7 @@ export function PlaceSearch({
 
   // Debounced Photon API call for global places
   useEffect(() => {
-    if (!isOpen || trimmed.length < 2) {
+    if (!isOpen || trimmed.length < 3) {
       return;
     }
 
@@ -166,7 +166,7 @@ export function PlaceSearch({
       } finally {
         setIsSearching(false);
       }
-    }, 280);
+    }, 350);
 
     return () => {
       clearTimeout(timer);

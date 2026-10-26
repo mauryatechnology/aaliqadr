@@ -67,6 +67,22 @@ function notifyDrawer(open: boolean) {
   drawerListeners.forEach((l) => l());
 }
 
+/**
+ * Search → add-to-bag analytics (plan.md §9.2): if this product was reached from a search in
+ * the last 30 minutes, count the add against that query. The action loads only then.
+ */
+export const SEARCH_TRAIL = "aq.search-trail";
+function attributeToSearch(slug: string) {
+  try {
+    const trail = JSON.parse(sessionStorage.getItem(SEARCH_TRAIL) ?? "null") as { q: string; slug: string; at: number } | null;
+    if (!trail || trail.slug !== slug || Date.now() - trail.at > 30 * 60_000) return;
+    sessionStorage.removeItem(SEARCH_TRAIL);
+    void import("@/actions/search").then((m) => m.trackSearchAction({ q: trail.q, event: "add", slug }));
+  } catch {
+    // Storage blocked: no attribution.
+  }
+}
+
 export const cart = {
   openDrawer() {
     notifyDrawer(true);
@@ -84,6 +100,7 @@ export const cart = {
       ? lines.map((l) => (l.sku === line.sku ? { ...l, qty: Math.min(l.qty + qty, maxQty) } : l))
       : [...lines, { ...line, qty: Math.min(qty, maxQty) }];
     write(next);
+    attributeToSearch(line.slug);
     if (autoOpen) {
       notifyDrawer(true);
     }

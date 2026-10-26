@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ChevronRight, LayoutDashboard } from "lucide-react";
+import { ChevronRight, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { hasRole, requireUser } from "@/server/auth";
 import { listOrdersForUser } from "@/server/queries/account";
 import { formatPrice } from "@/lib/money";
@@ -42,6 +42,9 @@ async function Content() {
             <LayoutDashboard className="size-4" aria-hidden /> Admin dashboard
           </Link>
         )}
+        <Link href="/account/security" className="flex items-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-sm hover:border-gold/60">
+          <ShieldCheck className="size-4" aria-hidden /> Password &amp; security
+        </Link>
         <SignOutButton />
       </aside>
       <section className="surface flex flex-col p-6" aria-labelledby="orders-h">

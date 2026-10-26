@@ -1,18 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useId, useState, useTransition } from "react";
 import { ArrowLeft, KeyRound, Loader2, Mail } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { PasswordInput } from "./PasswordInput";
 
-/** Sign-in: email password or 6-digit OTP code, or Google (docs/06 §2). */
+/** Sign-in: 6-digit email code, password (for accounts that set one), or Google (docs/06 §2). */
 export function LoginForm({ next, googleEnabled }: { next: string; googleEnabled: boolean }) {
   const router = useRouter();
   const emailId = useId();
   const passwordId = useId();
   const codeId = useId();
-  const [authMode, setAuthMode] = useState<"password" | "otp">(next.includes("/admin") ? "password" : "password");
+  // Staff usually have a password; customers sign in with a code (most never set a password).
+  const [authMode, setAuthMode] = useState<"password" | "otp">(next.startsWith("/admin") ? "password" : "otp");
+  const [hideSignal, setHideSignal] = useState(0);
   const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,12 +30,14 @@ export function LoginForm({ next, googleEnabled }: { next: string; googleEnabled
   function loginWithPassword(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setHideSignal((n) => n + 1);
     start(async () => {
       const { error } = await authClient.signIn.email({
         email: email.trim(),
         password,
       });
-      if (error) return setError(error.message ?? "Invalid email or password.");
+      // One message for every failure: never reveal whether an account or password exists.
+      if (error) return setError(error.status === 429 ? "Too many attempts. Please wait a few minutes, or sign in with an email code." : "That email and password don't match. Try again, or use an email code.");
       router.replace(safeNext as Route);
       router.refresh();
     });
@@ -122,16 +128,20 @@ export function LoginForm({ next, googleEnabled }: { next: string; googleEnabled
             <label htmlFor={passwordId} className="text-sm font-medium">
               Password
             </label>
-            <input
+            <PasswordInput
               id={passwordId}
-              type="password"
+              hideSignal={hideSignal}
               autoComplete="current-password"
               required
+              maxLength={128}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               className="h-13 rounded-xl border border-white/15 bg-black/30 px-4 text-base text-fg placeholder:text-muted/70 focus:border-gold focus:outline-none"
             />
+            <Link href={`/forgot-password${email.includes("@") ? `?email=${encodeURIComponent(email.trim())}` : ""}` as Route} className="self-end text-sm text-muted underline-offset-4 hover:text-fg hover:underline">
+              Forgot password?
+            </Link>
           </div>
 
           <button

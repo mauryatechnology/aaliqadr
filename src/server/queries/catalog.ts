@@ -6,7 +6,7 @@ import { Product, type ProductDoc } from "@/server/models/Product";
 import { Category, Collection, type CategoryDoc, type CollectionDoc } from "@/server/models/catalog";
 import { SEED_CATEGORIES, SEED_COLLECTIONS, SEED_PRODUCTS } from "@/server/catalog/seed";
 import { categoryTrail, matchesRules, type RuleSet } from "@/server/catalog/rules";
-import { toCard, type BadgeKey, type CategoryDTO, type CollectionDTO, type ProductCardDTO, type ProductDTO } from "@/server/catalog/types";
+import { toCard, type BadgeKey, type MediaScope, type CategoryDTO, type CollectionDTO, type ProductCardDTO, type ProductDTO } from "@/server/catalog/types";
 
 /**
  * Cached catalogue reads (docs/03 §5). Every storefront page reads through here, so most
@@ -26,6 +26,12 @@ export const tags = {
 
 export type LeanProduct = ProductDoc & { _id: { toString(): string }; createdAt?: Date; updatedAt?: Date };
 
+function toScope(sc: { kind?: string | null; sku?: string | null; axis?: number | null; value?: string | null } | null | undefined): MediaScope {
+  if (sc?.kind === "variant" && sc.sku) return { kind: "variant", sku: sc.sku };
+  if (sc?.kind === "option" && typeof sc.axis === "number" && sc.value) return { kind: "option", axis: sc.axis, value: sc.value };
+  return { kind: "shared" };
+}
+
 export function fromDoc(d: LeanProduct): ProductDTO {
   return {
     id: d._id.toString(),
@@ -41,7 +47,8 @@ export function fromDoc(d: LeanProduct): ProductDTO {
     options: (d.options ?? []).map((o) => ({ name: o.name, values: [...o.values] })),
     specs: (d.specs ?? []).map((x) => ({ label: x.label ?? "", value: x.value ?? "" })),
     aPlus: d.aPlus ? (JSON.parse(JSON.stringify(d.aPlus)) as ProductDTO["aPlus"]) : [],
-    display: { notes: d.display?.notes ?? true, profile: d.display?.profile ?? true, specs: d.display?.specs ?? true },
+    display: { notes: d.display?.notes ?? true, profile: d.display?.profile ?? true, specs: d.display?.specs ?? true, sharedAfterVariant: d.display?.sharedAfterVariant ?? true },
+    imageAxis: typeof d.imageAxis === "number" ? d.imageAxis : undefined,
     zodiacSign: (d.zodiacSign ?? undefined) as ZodiacSlug | undefined,
     element: (d.element ?? undefined) as Element | undefined,
     concentration: (d.concentration ?? undefined) as ProductDTO["concentration"],
@@ -71,6 +78,8 @@ export function fromDoc(d: LeanProduct): ProductDTO {
       ? d.media.map((m, i) => ({
           id: m.id ?? `m${i}`,
           kind: (m.kind ?? "image") as "image" | "video",
+          scope: toScope(m.scope),
+          hash: m.hash ?? undefined,
           url: m.url,
           posterUrl: m.posterUrl ?? undefined,
           alt: m.alt,
@@ -83,6 +92,7 @@ export function fromDoc(d: LeanProduct): ProductDTO {
           {
             id: `bottle-${d.zodiacSign ?? "brand"}`,
             kind: "image" as const,
+            scope: { kind: "shared" as const },
             url: `/bottles/${d.zodiacSign ?? "brand"}.svg`,
             alt: `${d.name} perfume bottle artwork`,
             width: 720,

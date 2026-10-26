@@ -12,6 +12,7 @@ import type { CategoryInput } from "@/schemas/product";
 import { cn } from "@/lib/cn";
 import { Badge, btnPrimary, btnSecondary, FieldLabel, inputCls, td, th } from "../ui";
 import { FormStatus } from "../FormStatus";
+import { useUnsavedGuard } from "../useUnsavedGuard";
 import { ConfirmButton, ImageField, Switch } from "../widgets";
 
 export interface CategoryRow {
@@ -34,7 +35,13 @@ const blank = (parentId?: string): CategoryInput => ({ name: "", slug: "", paren
 /** Category tree with an edit panel (FlexSell's categories manager). */
 export function CategoryManager({ rows }: { rows: CategoryRow[] }) {
   const router = useRouter();
-  const [edit, setEdit] = useState<CategoryInput | null>(null);
+  const [edit, setEditState] = useState<CategoryInput | null>(null);
+  const [opened, setOpened] = useState("null");
+  const setEdit = (v: CategoryInput | null) => {
+    setEditState(v);
+    setOpened(JSON.stringify(v));
+  };
+  useUnsavedGuard(JSON.stringify(edit) !== opened);
   const [state, setState] = useState<FormState>({});
   const [listState, setListState] = useState<FormState>({});
   const [pending, start] = useTransition();
@@ -113,28 +120,28 @@ export function CategoryManager({ rows }: { rows: CategoryRow[] }) {
             <button type="button" aria-label="Close" onClick={() => setEdit(null)} className="rounded p-1 hover:bg-neutral-100"><X className="size-4" /></button>
           </div>
           <div className="flex flex-col gap-4 p-5">
-            <FieldLabel label="Name"><input className={inputCls} value={edit.name} maxLength={60} onChange={(e) => setEdit({ ...edit, name: e.target.value, slug: slugTouched ? edit.slug : slugify(e.target.value) })} /></FieldLabel>
-            <FieldLabel label="URL" hint={`/category/${edit.slug || "…"}`}><input className={`${inputCls} font-mono`} value={edit.slug} onChange={(e) => { setSlugTouched(true); setEdit({ ...edit, slug: e.target.value.toLowerCase() }); }} /></FieldLabel>
+            <FieldLabel label="Name"><input className={inputCls} value={edit.name} maxLength={60} onChange={(e) => setEditState({ ...edit, name: e.target.value, slug: slugTouched ? edit.slug : slugify(e.target.value) })} /></FieldLabel>
+            <FieldLabel label="URL" hint={`/category/${edit.slug || "…"}`}><input className={`${inputCls} font-mono`} value={edit.slug} onChange={(e) => { setSlugTouched(true); setEditState({ ...edit, slug: e.target.value.toLowerCase() }); }} /></FieldLabel>
             <FieldLabel label="Parent">
-              <select className={inputCls} value={edit.parentId ?? ""} onChange={(e) => setEdit({ ...edit, parentId: e.target.value || undefined })}>
+              <select className={inputCls} value={edit.parentId ?? ""} onChange={(e) => setEditState({ ...edit, parentId: e.target.value || undefined })}>
                 <option value="">None (top level)</option>
                 {rows.filter((r) => !blocked.has(r.id)).map((r) => <option key={r.id} value={r.id}>{"— ".repeat(r.depth)}{r.name}</option>)}
               </select>
             </FieldLabel>
-            <FieldLabel label="Description" hint="Shown at the top of the category page."><textarea rows={3} maxLength={600} className={`${inputCls} h-auto py-2`} value={edit.description} onChange={(e) => setEdit({ ...edit, description: e.target.value })} /></FieldLabel>
+            <FieldLabel label="Description" hint="Shown at the top of the category page."><textarea rows={3} maxLength={600} className={`${inputCls} h-auto py-2`} value={edit.description} onChange={(e) => setEditState({ ...edit, description: e.target.value })} /></FieldLabel>
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-neutral-800">Image</span>
-              <ImageField value={edit.image} prefix="catalog/categories" onChange={(image) => setEdit({ ...edit, image })} />
+              <ImageField value={edit.image} prefix="catalog/categories" onChange={(image) => setEditState({ ...edit, image })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <FieldLabel label="Sort order"><input type="number" min={0} className={inputCls} value={edit.sortOrder} onChange={(e) => setEdit({ ...edit, sortOrder: Number(e.target.value) || 0 })} /></FieldLabel>
-              <div className="pt-7"><Switch checked={edit.isActive} onChange={(isActive) => setEdit({ ...edit, isActive })} label="Visible in store" /></div>
+              <FieldLabel label="Sort order"><input type="number" min={0} className={inputCls} value={edit.sortOrder} onChange={(e) => setEditState({ ...edit, sortOrder: Number(e.target.value) || 0 })} /></FieldLabel>
+              <div className="pt-7"><Switch checked={edit.isActive} onChange={(isActive) => setEditState({ ...edit, isActive })} label="Visible in store" /></div>
             </div>
             <details className="rounded-lg border border-neutral-200 p-3">
               <summary className="cursor-pointer text-sm font-medium">Search listing (optional)</summary>
               <div className="mt-3 flex flex-col gap-3">
-                <FieldLabel label="Page title" hint={`${edit.seoTitle.length}/60`}><input className={inputCls} maxLength={70} value={edit.seoTitle} onChange={(e) => setEdit({ ...edit, seoTitle: e.target.value })} /></FieldLabel>
-                <FieldLabel label="Meta description" hint={`${edit.seoDescription.length}/155`}><textarea rows={2} maxLength={170} className={`${inputCls} h-auto py-2`} value={edit.seoDescription} onChange={(e) => setEdit({ ...edit, seoDescription: e.target.value })} /></FieldLabel>
+                <FieldLabel label="Page title" hint={`${edit.seoTitle.length}/60`}><input className={inputCls} maxLength={70} value={edit.seoTitle} onChange={(e) => setEditState({ ...edit, seoTitle: e.target.value })} /></FieldLabel>
+                <FieldLabel label="Meta description" hint={`${edit.seoDescription.length}/155`}><textarea rows={2} maxLength={170} className={`${inputCls} h-auto py-2`} value={edit.seoDescription} onChange={(e) => setEditState({ ...edit, seoDescription: e.target.value })} /></FieldLabel>
               </div>
             </details>
             <FormStatus state={state} />

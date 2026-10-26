@@ -13,7 +13,7 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <>
       <PageHero eyebrow="Your account" title="Sign in" align="center">
-        <p className="max-w-md text-muted">No password to remember. We&apos;ll email you a one-time code.</p>
+        <p className="max-w-md text-muted">Sign in with a one-time code sent to your email, or with your password if you&apos;ve set one.</p>
       </PageHero>
       <div className="mx-auto w-full max-w-md px-4 pb-24">
         <Suspense fallback={<div className="surface h-80 animate-pulse" />}>

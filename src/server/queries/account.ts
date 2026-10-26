@@ -89,3 +89,12 @@ export async function getClaimsForOrder(order: Pick<OrderDoc, "_id" | "status" |
     })),
   };
 }
+
+/** Whether this user can sign in with a password (has a credential account). */
+export async function hasPasswordAccount(userId: string): Promise<boolean> {
+  const conn = await db();
+  const { ObjectId } = await import("mongodb");
+  const ids: unknown[] = [userId];
+  if (ObjectId.isValid(userId)) ids.push(new ObjectId(userId));
+  return !!(await conn.connection.db!.collection("account").findOne({ userId: { $in: ids }, providerId: "credential" }, { projection: { _id: 1 } }));
+}

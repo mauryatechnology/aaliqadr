@@ -51,7 +51,7 @@ await dbx.collection("session").insertOne({ _id: new mongoose.Types.ObjectId(), 
 const signed = encodeURIComponent(`${token}.${createHmac("sha256", process.env.BETTER_AUTH_SECRET).update(token).digest("base64")}`);
 
 const port = 9400 + Math.floor(Math.random() * 300);
-const chrome = spawn("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", ["--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), "e2e-"))}`, "about:blank"], { stdio: "ignore" });
+const chrome = spawn(process.env.CHROME_PATH ?? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", ["--headless=new", "--no-sandbox", `--remote-debugging-port=${port}`, `--user-data-dir=${mkdtempSync(join(tmpdir(), "e2e-"))}`, "about:blank"], { stdio: "ignore" });
 let target;
 for (let i = 0; i < 50 && !target; i++) {
   await sleep(200);

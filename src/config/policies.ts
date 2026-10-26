@@ -59,7 +59,7 @@ const RAW: Record<PolicySlug, { title: string; summary: string; sections: [strin
       ],
       [
         "Your birth date",
-        "The Find My Sign tool works entirely in your browser: we do not receive or store the date you enter. If you add a birth date to your account, it is optional, encrypted, and used only for birthday offers you consent to.",
+        "The Find My Sign tool calculates your sign, nakshatra and tithi entirely in your browser: we do not receive or store your birth date or time. When you search for a birthplace, only the place name you type is sent to an OpenStreetMap-based search service (Photon by komoot) to suggest matching places; map images come from OpenStreetMap, CARTO or Esri. If you add a birth date to your account, it is optional, encrypted, and used only for birthday offers you consent to.",
       ],
       ["Marketing", "We send offers only if you opt in, separately for email, SMS and WhatsApp. You can withdraw consent at any time."],
       [

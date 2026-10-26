@@ -86,6 +86,8 @@ export interface CouponDoc {
   perCustomerLimit: number;
   usedCount: number;
   isActive: boolean;
+  /** Advertised in the product page's offers row (plan.md §10.3). */
+  showOnProduct?: boolean;
   createdAt?: Date;
 }
 const CouponSchema = new Schema<CouponDoc>(
@@ -103,6 +105,7 @@ const CouponSchema = new Schema<CouponDoc>(
     perCustomerLimit: { type: Number, default: 1 },
     usedCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    showOnProduct: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -110,6 +113,7 @@ CouponSchema.index({ code: 1 }, { unique: true });
 export const Coupon = model<CouponDoc>("Coupon", CouponSchema);
 
 export interface CouponRedemptionDoc {
+  createdAt?: Date;
   code: string;
   email: string;
   orderId: string;
@@ -202,6 +206,23 @@ export interface SettingsDoc {
   reservationMinutes: number;
   /** How long after delivery a damage/leak/wrong-item claim can be raised. */
   returnWindowHours: number;
+  /** Seller details for invoices and the footer, edited by the owner (plan.md §5). */
+  business?: BusinessDetails;
+  /** Delivery-estimate days by zone (plan.md §10.3). */
+  delivery?: { dispatch: [number, number]; local: [number, number]; metro: [number, number]; rest: [number, number]; remote: [number, number] };
+  /** Customer questions on product pages (plan.md §10.3); off until switched on. */
+  qaEnabled?: boolean;
+}
+
+export interface BusinessDetails {
+  legalName: string;
+  address: string;
+  city: string;
+  state: string;
+  stateCode: string;
+  gstin: string;
+  supportPhone: string;
+  supportEmail: string;
 }
 const SettingsSchema = new Schema<SettingsDoc>(
   {
@@ -219,6 +240,9 @@ const SettingsSchema = new Schema<SettingsDoc>(
     codMaxOrderP: { type: Number, default: 500000 },
     codFeeP: { type: Number, default: 4900 },
     giftWrapP: { type: Number, default: 9900 },
+    delivery: { dispatch: [Number], local: [Number], metro: [Number], rest: [Number], remote: [Number] },
+    qaEnabled: { type: Boolean, default: false },
+    business: { legalName: String, address: String, city: String, state: String, stateCode: String, gstin: String, supportPhone: String, supportEmail: String },
     reservationMinutes: { type: Number, default: 30 },
     returnWindowHours: { type: Number, default: 48 },
   },
@@ -272,3 +296,47 @@ const AuthUserSchema = new Schema<AuthUserDoc>(
   { collection: "user", strict: false, timestamps: false },
 );
 export const AuthUser = model<AuthUserDoc>("AuthUser", AuthUserSchema);
+
+// ── Saved list views: named filter sets per person (plan.md §4) ──────────────
+export interface SavedViewDoc {
+  userId: string;
+  path: string;
+  name: string;
+  query: string;
+  createdAt?: Date;
+}
+const SavedViewSchema = new Schema<SavedViewDoc>(
+  {
+    userId: { type: String, required: true },
+    path: { type: String, required: true },
+    name: { type: String, required: true, trim: true },
+    query: { type: String, default: "" },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+SavedViewSchema.index({ userId: 1, path: 1, name: 1 }, { unique: true });
+export const SavedView = model<SavedViewDoc>("SavedView", SavedViewSchema);
+
+// ── Email log: what was sent to whom and whether it went (plan.md §13.4) ─────
+export interface EmailLogDoc {
+  to: string;
+  subject: string;
+  status: "sent" | "failed";
+  provider: "smtp" | "resend";
+  error?: string;
+  createdAt?: Date;
+}
+const EmailLogSchema = new Schema<EmailLogDoc>(
+  {
+    to: { type: String, required: true, lowercase: true },
+    subject: { type: String, required: true },
+    status: { type: String, enum: ["sent", "failed"], required: true },
+    provider: { type: String, enum: ["smtp", "resend"], required: true },
+    error: String,
+  },
+  { timestamps: { createdAt: true, updatedAt: false } },
+);
+EmailLogSchema.index({ to: 1, createdAt: -1 });
+// Kept 180 days: enough to answer "did the customer get it?".
+EmailLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 180 * 86_400 });
+export const EmailLog = model<EmailLogDoc>("EmailLog", EmailLogSchema);

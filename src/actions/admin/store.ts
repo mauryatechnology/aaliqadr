@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { z } from "zod";
 import { csvRecords } from "@/lib/csv";
 import { rupeesToPaise } from "@/lib/money";
@@ -8,7 +8,8 @@ import { SKU_RE } from "@/lib/sku";
 import { requireRole, ROLES } from "@/server/auth";
 import { db } from "@/server/db/connect";
 import { ObjectId } from "mongodb";
-import { AuditLog, Coupon } from "@/server/models/commerce";
+import { AuditLog, Coupon, CouponRedemption } from "@/server/models/commerce";
+import { couponOfferTag } from "@/server/queries/offers";
 import { Product } from "@/server/models/Product";
 import { adjust } from "@/server/services/inventory";
 import { revalidateProducts } from "@/server/services/products";
@@ -42,12 +43,32 @@ export async function adjustStockAction(_prev: FormState, fd: FormData): Promise
   }
 }
 
+/** Inline "low stock at" edit from Inventory (plan.md §4). Returns the previous value for Undo. */
+export async function setLowStockThresholdAction(productId: string, sku: string, threshold: number): Promise<FormState & { previous?: number }> {
+  try {
+    const user = await requireRole("admin");
+    const v = z.object({ productId: z.string().regex(/^[a-f0-9]{24}$/), sku: z.string().regex(SKU_RE), threshold: z.number().int().min(0).max(1000) }).parse({ productId, sku, threshold });
+    await db();
+    const p = await Product.findOne({ _id: v.productId, "variants.sku": v.sku }).select("slug variants.sku variants.lowStockThreshold").lean();
+    if (!p) return { error: "Variant not found." };
+    const previous = p.variants.find((x) => x.sku === v.sku)?.lowStockThreshold ?? 5;
+    await Product.updateOne({ _id: v.productId, "variants.sku": v.sku }, { $set: { "variants.$.lowStockThreshold": v.threshold } });
+    await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "inventory.threshold", entity: { kind: "product", id: v.productId }, detail: { sku: v.sku, from: previous, to: v.threshold } });
+    revalidateProducts([p.slug]);
+    revalidatePath("/admin/inventory");
+    return { ok: true, message: `${v.sku}: low-stock alert at ${v.threshold}.`, previous };
+  } catch (e) {
+    return toFormError(e, "set_threshold");
+  }
+}
+
 export async function setRoleAction(_prev: FormState, fd: FormData): Promise<FormState> {
   try {
     const user = await requireRole("owner");
     const parsed = z.object({ userId: z.string().regex(/^[a-f0-9]{24}$/), role: z.enum(ROLES) }).safeParse({ userId: str(fd, "userId"), role: str(fd, "role") });
     if (!parsed.success) return { error: "Choose a role." };
     if (parsed.data.userId === user.id) return { error: "You can't change your own role." };
+    if (parsed.data.role === "owner" && str(fd, "confirm") !== "OWNER") return { error: "Type OWNER to confirm giving full ownership." };
     const conn = await db();
     // Better Auth owns these collections; it stores ids as ObjectIds.
     const users = conn.connection.db!.collection<{ _id: ObjectId; email: string; role?: string }>("user");
@@ -65,6 +86,30 @@ export async function setRoleAction(_prev: FormState, fd: FormData): Promise<For
   }
 }
 
+/** Owner: takes away someone's staff access (role → customer) and signs them out (plan.md §5). */
+export async function removeStaffAccessAction(userId: string): Promise<FormState> {
+  const fd = new FormData();
+  fd.set("userId", userId);
+  fd.set("role", "customer");
+  const res = await setRoleAction({}, fd);
+  return res.ok ? { ok: true, message: "Access removed. They've been signed out." } : res;
+}
+
+/** Owner: signs a person out on every device without changing their role (plan.md §6 item 10). */
+export async function endUserSessionsAction(userId: string): Promise<FormState> {
+  try {
+    const user = await requireRole("owner");
+    const id = z.string().regex(/^[a-f0-9]{24}$/).parse(userId);
+    if (id === user.id) return { error: "Use Account › Security to sign out your own other devices." };
+    const conn = await db();
+    const res = await conn.connection.db!.collection("session").deleteMany({ userId: { $in: [new ObjectId(id), id] } });
+    await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "user.sessions_ended", entity: { kind: "user", id }, detail: { sessions: res.deletedCount } });
+    return { ok: true, message: res.deletedCount ? `Signed out of ${res.deletedCount} session${res.deletedCount === 1 ? "" : "s"}.` : "They had no active sessions." };
+  } catch (e) {
+    return toFormError(e, "end_sessions");
+  }
+}
+
 const couponSchema = z
   .object({
     code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/, "4–20 letters or numbers"),
@@ -73,19 +118,22 @@ const couponSchema = z
     value: z.coerce.number().min(0).max(100000),
     maxDiscount: z.coerce.number().min(0).max(100000),
     minSubtotal: z.coerce.number().min(0).max(1000000),
-    startsAt: z.coerce.date(),
-    endsAt: z.coerce.date(),
+    // Dates are India calendar days: a coupon runs from 00:00 IST on its start day to 23:59 IST
+    // on its end day (plan.md B2).
+    startsAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a start date").transform((d) => new Date(`${d}T00:00:00+05:30`)),
+    endsAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose an end date").transform((d) => new Date(`${d}T23:59:59.999+05:30`)),
     usageLimit: z.coerce.number().int().min(0).max(1000000),
     perCustomerLimit: z.coerce.number().int().min(0).max(100),
+    showOnProduct: z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean()),
   })
-  .refine((c) => c.endsAt > c.startsAt, { message: "End date must be after the start", path: ["endsAt"] })
+  .refine((c) => c.endsAt > c.startsAt, { message: "End date can't be before the start", path: ["endsAt"] })
   .refine((c) => c.kind !== "percent" || (c.value > 0 && c.value <= 90), { message: "Percent must be between 1 and 90", path: ["value"] })
   .refine((c) => c.kind !== "flat" || c.value > 0, { message: "Enter the discount amount", path: ["value"] });
 
 export async function createCouponAction(_prev: FormState, fd: FormData): Promise<FormState> {
   try {
     const user = await requireRole("admin");
-    const keys = ["code", "description", "kind", "value", "maxDiscount", "minSubtotal", "startsAt", "endsAt", "usageLimit", "perCustomerLimit"];
+    const keys = ["code", "description", "kind", "value", "maxDiscount", "minSubtotal", "startsAt", "endsAt", "usageLimit", "perCustomerLimit", "showOnProduct"];
     const parsed = couponSchema.safeParse(Object.fromEntries(keys.map((k) => [k, str(fd, k)])));
     if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form.", fieldErrors: fieldErrors(parsed.error) };
     const c = parsed.data;
@@ -102,14 +150,81 @@ export async function createCouponAction(_prev: FormState, fd: FormData): Promis
       endsAt: c.endsAt,
       usageLimit: c.usageLimit,
       perCustomerLimit: c.perCustomerLimit,
+      showOnProduct: c.showOnProduct,
       isActive: true,
     });
+    updateTag(couponOfferTag);
     await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "coupon.create", entity: { kind: "coupon", id: c.code } });
     revalidatePath("/admin/coupons");
     return { ok: true, message: `Coupon ${c.code} is live.` };
   } catch (e) {
     return toFormError(e, "create_coupon");
   }
+}
+
+/**
+ * Edits a coupon (plan.md §5). Once used, its code, type and value are fixed (orders refer to
+ * them); the description, dates, limits and visibility can still change.
+ */
+export async function updateCouponAction(_prev: FormState, fd: FormData): Promise<FormState> {
+  try {
+    const user = await requireRole("admin");
+    const keys = ["code", "description", "kind", "value", "maxDiscount", "minSubtotal", "startsAt", "endsAt", "usageLimit", "perCustomerLimit", "showOnProduct"];
+    const parsed = couponSchema.safeParse(Object.fromEntries(keys.map((k) => [k, str(fd, k)])));
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form.", fieldErrors: fieldErrors(parsed.error) };
+    const c = parsed.data;
+    await db();
+    const existing = await Coupon.findOne({ code: c.code }).lean();
+    if (!existing) return { error: "Coupon not found." };
+    const used = existing.usedCount > 0 || !!(await CouponRedemption.exists({ code: c.code }));
+    const set: Record<string, unknown> = {
+      description: c.description,
+      startsAt: c.startsAt,
+      endsAt: c.endsAt,
+      usageLimit: c.usageLimit,
+      perCustomerLimit: c.perCustomerLimit,
+      showOnProduct: c.showOnProduct,
+      minSubtotalP: rupeesToPaise(c.minSubtotal),
+      maxDiscountP: rupeesToPaise(c.maxDiscount),
+    };
+    if (!used) Object.assign(set, { kind: c.kind, valueBps: c.kind === "percent" ? Math.round(c.value * 100) : 0, valueP: c.kind === "flat" ? rupeesToPaise(c.value) : 0 });
+    else if (c.kind !== existing.kind || (c.kind === "percent" ? Math.round(c.value * 100) !== existing.valueBps : c.kind === "flat" ? rupeesToPaise(c.value) !== existing.valueP : false)) return { error: "This coupon has been used, so its type and value can't change. Create a new code instead." };
+    await Coupon.updateOne({ code: c.code }, { $set: set });
+    await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "coupon.update", entity: { kind: "coupon", id: c.code }, detail: { before: { description: existing.description, startsAt: existing.startsAt, endsAt: existing.endsAt, usageLimit: existing.usageLimit } } });
+    updateTag(couponOfferTag);
+    revalidatePath("/admin/coupons");
+    return { ok: true, message: `${c.code} updated.` };
+  } catch (e) {
+    return toFormError(e, "update_coupon");
+  }
+}
+
+/** Deletes a coupon that was never used; a used one can only be paused. */
+export async function deleteCouponAction(code: string): Promise<FormState> {
+  try {
+    const user = await requireRole("admin");
+    const c = z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/).parse(code);
+    await db();
+    const existing = await Coupon.findOne({ code: c }).lean();
+    if (!existing) return { error: "Coupon not found." };
+    if (existing.usedCount > 0 || (await CouponRedemption.exists({ code: c }))) return { error: "This coupon has been used, so it's kept for the records. Pause it instead." };
+    await Coupon.deleteOne({ code: c });
+    await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: "coupon.delete", entity: { kind: "coupon", id: c } });
+    updateTag(couponOfferTag);
+    revalidatePath("/admin/coupons");
+    return { ok: true, message: `${c} deleted.` };
+  } catch (e) {
+    return toFormError(e, "delete_coupon");
+  }
+}
+
+/** Orders that used a coupon, newest first. */
+export async function couponUsageAction(code: string) {
+  await requireRole("admin");
+  const c = z.string().trim().toUpperCase().regex(/^[A-Z0-9]{4,20}$/).parse(code);
+  await db();
+  const rows = await CouponRedemption.find({ code: c }).sort({ createdAt: -1 }).limit(200).lean();
+  return rows.map((r) => ({ orderId: r.orderId, email: r.email, discountP: r.discountP, status: r.status, at: r.createdAt ? new Date(r.createdAt).toISOString() : "" }));
 }
 
 export async function toggleCouponAction(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -119,6 +234,7 @@ export async function toggleCouponAction(_prev: FormState, fd: FormData): Promis
     const active = str(fd, "active") === "true";
     await db();
     await Coupon.updateOne({ code }, { $set: { isActive: active } });
+    updateTag(couponOfferTag);
     await AuditLog.create({ actor: { userId: user.id, name: user.name, role: user.role }, action: active ? "coupon.enable" : "coupon.disable", entity: { kind: "coupon", id: code } });
     revalidatePath("/admin/coupons");
     return { ok: true, message: `${code} ${active ? "enabled" : "paused"}.` };

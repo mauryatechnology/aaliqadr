@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/Logo";
 import { CartButton } from "./CartButton";
 import { MobileMenu } from "./MobileMenu";
 import { MAIN_NAV } from "./nav";
+import { SearchLink } from "@/components/search/SearchHost";
 
 export function Header() {
   return (
@@ -24,9 +25,9 @@ export function Header() {
           ))}
         </nav>
         <div className="flex items-center">
-          <Link href="/search" className="grid size-11 place-items-center rounded-full text-fg transition-colors hover:text-gold" aria-label="Search">
+          <SearchLink className="grid size-11 place-items-center rounded-full text-fg transition-colors hover:text-gold">
             <Search className="size-5" strokeWidth={1.5} />
-          </Link>
+          </SearchLink>
           <Link href="/account" className="hidden size-11 place-items-center rounded-full text-fg transition-colors hover:text-gold sm:grid" aria-label="Your account">
             <User className="size-5" strokeWidth={1.5} />
           </Link>

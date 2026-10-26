@@ -1,28 +1,23 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import type { Route } from "next";
 import { Suspense } from "react";
 import { Search } from "lucide-react";
-import { ZODIAC } from "@/config/zodiac";
-import { getAllProducts } from "@/server/queries/catalog";
-import { toCard, type ProductDTO } from "@/server/catalog/types";
-import { ProductCard } from "@/components/product/ProductCard";
+import { SIGNS } from "@/config/zodiac";
+import { routes } from "@/lib/routes";
+import { normalise } from "@/lib/search-engine";
+import { getBestSellers, getCategories } from "@/server/queries/catalog";
+import { searchProductCards } from "@/server/queries/search";
+import { getContent } from "@/server/queries/engagement";
+import { ProductGrid } from "@/components/product/ProductGrid";
 import { PageHero } from "@/components/layout/PageHero";
+import { Listing } from "@/components/listing/Listing";
+import { SearchTracker } from "@/components/listing/SearchTracker";
 
 export const metadata: Metadata = {
   title: "Search",
   robots: { index: false, follow: true },
 };
-
-/** Weighted text match over the (small, cached) catalogue: name > sign > notes > description. */
-function score(p: ProductDTO, terms: string[]): number {
-  const sign = p.zodiacSign ? ZODIAC[p.zodiacSign] : undefined;
-  const fields: [string, number][] = [
-    [p.name, 10],
-    [sign ? `${sign.name} ${sign.rashi} ${sign.element}` : (p.element ?? ""), 8],
-    [p.notes ? [...p.notes.top, ...p.notes.heart, ...p.notes.base].map((n) => `${n.name} ${n.family}`).join(" ") : "", 5],
-    [`${p.tagline} ${p.description}`, 1],
-  ];
-  return terms.reduce((total, t) => total + fields.reduce((s, [text, w]) => (text.toLowerCase().includes(t) ? s + w : s), 0), 0);
-}
 
 export default function SearchPage({ searchParams }: PageProps<"/search">) {
   return (
@@ -39,13 +34,13 @@ export default function SearchPage({ searchParams }: PageProps<"/search">) {
 
 function SearchForm({ defaultValue }: { defaultValue: string }) {
   return (
-    <form action="/search" role="search" className="surface mb-10 flex items-center gap-3 px-5">
+    <form action="/search" role="search" className="surface mb-8 flex items-center gap-3 px-5">
       <Search className="size-5 text-muted" aria-hidden />
       <input
         name="q"
         type="search"
         defaultValue={defaultValue}
-        placeholder="Search a sign, a note (oud, rose…) or a fragrance"
+        placeholder="A sign or rashi (Leo, Mesh), a note (oud, kesar) or a fragrance"
         aria-label="Search"
         maxLength={60}
         className="h-14 flex-1 bg-transparent text-lg outline-none placeholder:text-muted"
@@ -55,34 +50,66 @@ function SearchForm({ defaultValue }: { defaultValue: string }) {
 }
 
 async function Results({ searchParams }: { searchParams: PageProps<"/search">["searchParams"] }) {
-  const { q } = await searchParams;
-  const query = (typeof q === "string" ? q : "").trim().slice(0, 60);
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const products = await getAllProducts();
-  const results = terms.length
-    ? products
-        .map((p) => ({ p, s: score(p, terms) }))
-        .filter((x) => x.s > 0)
-        .sort((a, b) => b.s - a.s)
-        .map((x) => toCard(x.p))
-    : [];
+  const params = await searchParams;
+  const query = (typeof params.q === "string" ? params.q : "").trim().slice(0, 60);
+  const [{ cards, suggestion }, categories, content] = await Promise.all([query ? searchProductCards(query) : { cards: [], suggestion: null }, getCategories(), getContent()]);
+
+  if (!query) {
+    return (
+      <>
+        <SearchForm defaultValue="" />
+        {content.search.popular.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted">Popular:</span>
+            {content.search.popular.map((p) => <Link key={p} href={`/search?q=${encodeURIComponent(p)}` as Route} className="rounded-full border border-white/15 px-3 py-1.5 hover:border-gold">{p}</Link>)}
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
       <SearchForm defaultValue={query} />
-      {terms.length > 0 && (
-        <p className="mb-6 text-sm text-muted" aria-live="polite">
-          {results.length} result{results.length === 1 ? "" : "s"} for “{query}”
-        </p>
+      <SearchTracker q={query} results={cards.length} />
+      {cards.length > 0 ? (
+        <div data-search-results>
+          <Listing cards={cards} base="/search" params={params} categories={categories} relevance />
+        </div>
+      ) : (
+        <NoResults query={query} suggestion={suggestion} />
       )}
-      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {results.map((p, i) => (
-          <li key={p.id}>
-            <ProductCard product={p} priority={i < 4} />
-          </li>
-        ))}
-      </ul>
-      {terms.length > 0 && results.length === 0 && <p className="text-muted">Nothing matched. Try a note like “rose”, or a sign like “Leo”.</p>}
     </>
+  );
+}
+
+async function NoResults({ query, suggestion }: { query: string; suggestion: string | null }) {
+  const [best, categories] = await Promise.all([getBestSellers(4), getCategories()]);
+  const t = normalise(query);
+  const sign = SIGNS.find((s) => t.includes(normalise(s.name).slice(0, 3)) || t.includes(normalise(s.rashi).slice(0, 3)));
+  const cat = categories.find((c) => normalise(c.name).split(" ").some((w) => w.length > 3 && t.includes(w.slice(0, 4))));
+  return (
+    <div className="flex flex-col gap-8" aria-live="polite">
+      <div className="flex flex-col gap-2">
+        <p className="text-lg">Nothing matched “{query}”.</p>
+        {suggestion && (
+          <p className="text-muted">
+            Did you mean <Link href={`/search?q=${encodeURIComponent(suggestion)}` as Route} className="text-fg underline underline-offset-4">{suggestion}</Link>?
+          </p>
+        )}
+        <p className="flex flex-wrap gap-3 text-sm text-muted">
+          {sign && <Link href={routes.sign(sign.slug)} className="underline underline-offset-4 hover:text-fg">See {sign.name} ({sign.rashi})</Link>}
+          {cat && <Link href={routes.category(cat.slug)} className="underline underline-offset-4 hover:text-fg">Browse {cat.name}</Link>}
+          <Link href="/find-my-sign" className="underline underline-offset-4 hover:text-fg">Find your sign</Link>
+          <Link href={`/contact?about=${encodeURIComponent(`Looking for: ${query}`)}` as Route} className="underline underline-offset-4 hover:text-fg">Tell us what you were looking for</Link>
+        </p>
+      </div>
+      {best.length > 0 && (
+        <section>
+          <h2 className="eyebrow mb-4">Bestsellers</h2>
+          <ProductGrid items={best} />
+        </section>
+      )}
+    </div>
   );
 }

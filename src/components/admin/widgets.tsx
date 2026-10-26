@@ -6,7 +6,9 @@ import { ImagePlus, Loader2, Trash2, X } from "lucide-react";
 import { uploadImage } from "@/lib/upload-client";
 import type { FormState } from "@/actions/admin/shared";
 import { cn } from "@/lib/cn";
-import { btnDanger, btnSecondary, inputCls } from "./ui";
+import { btnSecondary, inputCls } from "./ui";
+import { ConfirmDialog } from "./kit/Dialog";
+import { toast } from "./kit/Toaster";
 
 /** Small interactive admin controls shared by the catalogue screens. */
 
@@ -103,6 +105,8 @@ export function ConfirmButton({
   className,
   danger = true,
   onDone,
+  detail,
+  typeToConfirm,
 }: {
   action: () => Promise<FormState>;
   children: ReactNode;
@@ -110,36 +114,38 @@ export function ConfirmButton({
   className?: string;
   danger?: boolean;
   onDone?: (s: FormState) => void;
+  /** Extra explanation in the dialog (e.g. a money summary). */
+  detail?: ReactNode;
+  /** Text to type before confirming (e.g. the count for a bulk delete). */
+  typeToConfirm?: string;
 }) {
   const [asking, setAsking] = useState(false);
   const [pending, start] = useTransition();
-  if (!asking)
-    return (
+  return (
+    <>
       <button type="button" onClick={() => setAsking(true)} className={className ?? btnSecondary}>
         {children}
       </button>
-    );
-  return (
-    <span role="alertdialog" aria-label={confirm} className="inline-flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-sm text-red-900">
-      {confirm}
-      <button
-        type="button"
-        disabled={pending}
-        className={cn(danger ? btnDanger : btnSecondary, "h-8 px-3")}
-        onClick={() =>
+      <ConfirmDialog
+        open={asking}
+        title={confirm}
+        danger={danger}
+        confirmLabel="Yes, continue"
+        typeToConfirm={typeToConfirm}
+        pending={pending}
+        onCancel={() => setAsking(false)}
+        onConfirm={() =>
           start(async () => {
             const res = await action();
             setAsking(false);
+            toast.result(res);
             onDone?.(res);
           })
         }
       >
-        {pending && <Loader2 className="size-3.5 animate-spin" />} Yes
-      </button>
-      <button type="button" className={cn(btnSecondary, "h-8 px-3")} onClick={() => setAsking(false)}>
-        Cancel
-      </button>
-    </span>
+        {detail}
+      </ConfirmDialog>
+    </>
   );
 }
 

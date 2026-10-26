@@ -1,17 +1,33 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import type { Route } from "next";
-import { Search } from "lucide-react";
 import { formatPrice } from "@/lib/money";
-import { PAYMENT_LABEL, STATUS_LABEL } from "@/lib/order-status";
+import { PAYMENT_LABEL, PAYMENT_STATUSES, STATUS_LABEL } from "@/lib/order-status";
+import { parseList } from "@/lib/list-params";
 import { routes } from "@/lib/routes";
-import { cn } from "@/lib/cn";
+import { INDIAN_STATES } from "@/config/india";
+import { SIGNS } from "@/config/zodiac";
 import { adminUser } from "@/server/admin/guard";
-import { listOrders, ORDER_TABS, PAGE_SIZE, type OrderTab } from "@/server/admin/queries";
-import { AdminSkeleton, Badge, btnSecondary, Empty, inputCls, PageHeader, STATUS_TONE, Table, td, th } from "@/components/admin/ui";
-import { adminDate } from "@/components/admin/format";
+import { listOrdersPaged } from "@/server/admin/lists";
+import { LIST_SPECS } from "@/server/admin/list-kinds";
+import { AdminSkeleton, Badge, Empty, PageHeader, STATUS_TONE } from "@/components/admin/ui";
+import { DataTable, ListTabs, type Column } from "@/components/admin/kit/DataTable";
+import { ListToolbar } from "@/components/admin/kit/ListToolbar";
+import { CopyButton, RelativeTime } from "@/components/admin/kit/Bits";
+import { OrderBulkBar } from "@/components/admin/OrderBulkBar";
 
 export const metadata = { title: "Orders" };
+
+const spec = LIST_SPECS.orders;
+const BASE = "/admin/orders";
+
+const TABS = [
+  { value: "", label: "All" },
+  { value: "confirmed,processing", label: "To ship" },
+  { value: "pending_payment", label: "Awaiting payment" },
+  { value: "shipped", label: "Shipped" },
+  { value: "delivered", label: "Delivered" },
+  { value: "cancelled,returned", label: "Cancelled" },
+];
 
 export default function Page(props: PageProps<"/admin/orders">) {
   return (
@@ -24,66 +40,71 @@ export default function Page(props: PageProps<"/admin/orders">) {
 async function AdminOrders({ searchParams }: PageProps<"/admin/orders">) {
   const user = await adminUser();
   if (!user) return null;
-  const sp = await searchParams;
-  const tab = (typeof sp.tab === "string" && sp.tab in ORDER_TABS ? sp.tab : "all") as OrderTab;
-  const q = typeof sp.q === "string" ? sp.q.slice(0, 60) : "";
-  const page = Math.max(1, Number(typeof sp.page === "string" ? sp.page : 1) || 1);
-  const { rows, total, tabCounts } = await listOrders(tab, q, page);
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const href = (p: Record<string, string | number | undefined>) => {
-    const params = new URLSearchParams();
-    const merged = { tab, q, page: 1, ...p };
-    for (const [k, v] of Object.entries(merged)) if (v && !(k === "page" && v === 1) && !(k === "tab" && v === "all")) params.set(k, String(v));
-    const s = params.toString();
-    return (`/admin/orders${s ? `?${s}` : ""}`) as Route;
-  };
+  const state = parseList(await searchParams, spec);
+  const { rows, total, statusCounts } = await listOrdersPaged(state);
+  type Row = (typeof rows)[number];
+  const count = (v: string) => (v ? v.split(",").reduce((n, s) => n + (statusCounts[s] ?? 0), 0) : Object.values(statusCounts).reduce((a, b) => a + b, 0));
+  const filtered = !!(state.q || Object.keys(state.f).some((k) => k !== "status"));
+
+  const columns: Column<Row>[] = [
+    {
+      key: "order",
+      label: "Order",
+      sort: "date",
+      cell: (o) => (
+        <span className="flex flex-col">
+          <span className="inline-flex items-center gap-1">
+            <Link href={routes.adminOrder(o._id)} className="font-medium underline-offset-4 hover:underline">{o._id}</Link>
+            <CopyButton value={o._id} label="Copy order number" />
+          </span>
+          <span className="text-xs text-neutral-500"><RelativeTime date={o.createdAt} /></span>
+        </span>
+      ),
+    },
+    { key: "customer", label: "Customer", cell: (o) => <span className="flex flex-col"><span className="max-w-48 truncate" title={o.contact.name}>{o.contact.name}</span><span className="text-xs text-neutral-500">{o.contact.phone} · {o.shippingAddress?.city}</span></span> },
+    { key: "items", label: "Items", cell: (o) => <span className="block max-w-56 truncate text-xs" title={o.items.map((i) => `${i.qty}× ${i.name} ${i.variantLabel}`).join(", ")}>{o.items.map((i) => `${i.qty}× ${i.name}`).join(", ")}</span> },
+    { key: "payment", label: "Payment", cell: (o) => <Badge tone={STATUS_TONE[o.payment.status]}>{o.payment.method === "cod" ? "COD" : "Online"} · {PAYMENT_LABEL[o.payment.status]}</Badge> },
+    { key: "status", label: "Status", sort: "status", cell: (o) => <span className="flex flex-col items-start gap-0.5"><Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge>{o.shipment?.awb && <span className="text-xs text-neutral-500">AWB {o.shipment.awb}</span>}</span> },
+    { key: "total", label: "Total", sort: "total", align: "right", cell: (o) => formatPrice(o.pricing.totalP) },
+  ];
 
   return (
     <>
-      <PageHeader title="Orders" description="Pack and ship confirmed orders. Search by order number, email, phone or name." />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {(Object.keys(ORDER_TABS) as OrderTab[]).map((t) => (
-          <Link key={t} href={href({ tab: t, page: 1 })} aria-current={t === tab ? "page" : undefined} className={cn("rounded-full px-3 py-1.5 text-sm font-medium", t === tab ? "bg-neutral-900 text-white" : "bg-white text-neutral-700 ring-1 ring-neutral-200 hover:bg-neutral-50")}>
-            {ORDER_TABS[t].label} <span className={cn("ml-1 tabular-nums", t === tab ? "text-neutral-300" : "text-neutral-500")}>{tabCounts[t]}</span>
+      <PageHeader title="Orders" description="Pack and ship confirmed orders." />
+      <ListTabs base={BASE} spec={spec} state={state} filter="status" tabs={TABS.map((t) => ({ ...t, count: count(t.value) }))} />
+      <ListToolbar
+        placeholder="Order no., email, phone, name, AWB, invoice"
+        exportKind="orders"
+        sorts={[{ value: "date", label: "Date" }, { value: "total", label: "Total" }]}
+        filters={[
+          { key: "pay", label: "Method", options: [{ value: "cod", label: "COD" }, { value: "razorpay", label: "Online" }] },
+          { key: "paid", label: "Payment", type: "multi", options: PAYMENT_STATUSES.map((p) => ({ value: p, label: PAYMENT_LABEL[p] })) },
+          { key: "state", label: "State", type: "multi", options: INDIAN_STATES.map((s) => ({ value: s.code, label: s.name })) },
+          { key: "sign", label: "Sign", type: "multi", options: SIGNS.map((s) => ({ value: s.slug, label: s.name })) },
+          { key: "coupon", label: "Coupon", options: [{ value: "yes", label: "Used a coupon" }, { value: "no", label: "No coupon" }] },
+          { key: "from", label: "From", type: "date" },
+          { key: "to", label: "To", type: "date" },
+        ]}
+      />
+      <OrderBulkBar ids={rows.map((o) => ({ id: o._id, status: o.status }))} />
+      <DataTable
+        base={BASE}
+        spec={spec}
+        state={state}
+        total={total}
+        rows={rows}
+        columns={columns}
+        rowKey={(o) => o._id}
+        select={{ form: "bulk-orders", value: (o) => o._id }}
+        mobile={(o) => (
+          <Link href={routes.adminOrder(o._id)} className="flex flex-col gap-1">
+            <span className="flex items-center justify-between gap-2"><span className="font-medium">{o._id}</span><span className="tabular-nums">{formatPrice(o.pricing.totalP)}</span></span>
+            <span className="text-neutral-600">{o.contact.name} · {o.items.reduce((n, i) => n + i.qty, 0)} item(s)</span>
+            <span className="flex flex-wrap items-center gap-1.5"><Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge><Badge tone={STATUS_TONE[o.payment.status]}>{o.payment.method === "cod" ? "COD" : "Online"}</Badge><span className="text-xs text-neutral-500"><RelativeTime date={o.createdAt} /></span></span>
           </Link>
-        ))}
-        <form action="/admin/orders" className="ml-auto flex w-full gap-2 sm:w-auto" role="search">
-          {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
-          <label htmlFor="q" className="sr-only">Search orders</label>
-          <input id="q" name="q" defaultValue={q} placeholder="AQ-100001, email, phone…" className={`${inputCls} sm:w-72`} />
-          <button className={btnSecondary} type="submit" aria-label="Search"><Search className="size-4" /></button>
-        </form>
-      </div>
-      {rows.length === 0 ? (
-        <Empty title={q ? `No orders match “${q}”` : "No orders here yet"} />
-      ) : (
-        <Table>
-          <thead>
-            <tr><th className={th}>Order</th><th className={th}>Customer</th><th className={th}>Items</th><th className={th}>Payment</th><th className={th}>Status</th><th className={`${th} text-right`}>Total</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((o) => (
-              <tr key={o._id} className="hover:bg-neutral-50">
-                <td className={td}><Link href={routes.adminOrder(o._id)} className="font-medium underline-offset-4 hover:underline">{o._id}</Link><span className="block text-xs text-neutral-500">{adminDate.format(new Date(o.createdAt))}</span></td>
-                <td className={td}>{o.contact.name}<span className="block text-xs text-neutral-500">{o.contact.phone}</span></td>
-                <td className={`${td} tabular-nums`}>{o.items.reduce((n, i) => n + i.qty, 0)}</td>
-                <td className={td}><Badge tone={STATUS_TONE[o.payment.status]}>{o.payment.method === "cod" ? "COD" : "Online"} · {PAYMENT_LABEL[o.payment.status]}</Badge></td>
-                <td className={td}><Badge tone={STATUS_TONE[o.status]}>{STATUS_LABEL[o.status]}</Badge>{o.shipment?.awb && <span className="block text-xs text-neutral-500">AWB {o.shipment.awb}</span>}</td>
-                <td className={`${td} text-right tabular-nums`}>{formatPrice(o.pricing.totalP)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
-      {pages > 1 && (
-        <nav aria-label="Pagination" className="mt-4 flex items-center justify-between text-sm">
-          <span className="text-neutral-600">Page {page} of {pages} · {total} orders</span>
-          <div className="flex gap-2">
-            {page > 1 && <Link href={href({ page: page - 1 })} className={btnSecondary}>Previous</Link>}
-            {page < pages && <Link href={href({ page: page + 1 })} className={btnSecondary}>Next</Link>}
-          </div>
-        </nav>
-      )}
+        )}
+        empty={<Empty title={filtered ? "No orders match" : "No orders here yet"}>{filtered ? "Try a different search or clear the filters." : "New orders appear here as soon as they're placed."}</Empty>}
+      />
     </>
   );
 }

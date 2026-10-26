@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { hasRole } from "@/server/auth";
 import { adminUser } from "@/server/admin/guard";
 import { getCustomerAdmin } from "@/server/admin/ops";
-import { stateName } from "@/config/india";
 import { formatPrice } from "@/lib/money";
 import { STATUS_LABEL } from "@/lib/order-status";
 import { routes } from "@/lib/routes";
 import { adminDate, adminDay } from "@/components/admin/format";
 import { AdminSkeleton, Badge, Card, Empty, PageHeader, Stat, STATUS_TONE, Table, td, th } from "@/components/admin/ui";
 import { RoleSelect } from "@/components/admin/AdminForms";
+import { CustomerProfileCard } from "@/components/admin/ops/CustomerForms";
+import { AddressBook } from "@/components/account/AddressBook";
+import { defaultCustomerAddressAction, deleteCustomerAddressAction, saveCustomerAddressAction } from "@/actions/admin/customers";
+import { listAddresses } from "@/server/services/addresses";
+import { Breadcrumbs } from "@/components/admin/kit/Layout";
 
 export const metadata = { title: "Customer" };
 
@@ -30,10 +34,17 @@ async function AdminCustomer({ params }: PageProps<"/admin/customers/[id]">) {
   const c = await getCustomerAdmin(id);
   if (!c) notFound();
   const seePii = hasRole(user, "admin");
+  const addresses = seePii ? await listAddresses(c.user.id) : [];
   const showMoney = hasRole(user, "admin");
   return (
     <>
-      <Link href="/admin/customers" className="mb-3 inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900"><ArrowLeft className="size-4" /> Customers</Link>
+      <Breadcrumbs items={[{ label: "Customers", href: "/admin/customers" }, { label: c.user.name || "Customer" }]} />
+      {(c.user.disabled || c.user.codBlocked) && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          {c.user.disabled && <Badge tone="red">Account deactivated</Badge>}
+          {c.user.codBlocked && <Badge tone="amber">COD blocked</Badge>}
+        </div>
+      )}
       <PageHeader
         title={c.user.name || c.user.email}
         description={`${seePii ? c.user.email : "email hidden"}${c.user.phone && seePii ? ` · ${c.user.phone}` : ""} · joined ${c.user.joined ? adminDay.format(c.user.joined) : "—"}`}
@@ -66,11 +77,21 @@ async function AdminCustomer({ params }: PageProps<"/admin/customers/[id]">) {
           )}
         </Card>
         <div className="flex flex-col gap-6">
+          {seePii && (
+            <Card title="Account">
+              <CustomerProfileCard id={c.user.id} name={c.user.name} phone={c.user.phone} disabled={c.user.disabled} codBlocked={c.user.codBlocked} isStaff={c.user.role !== "customer"} />
+            </Card>
+          )}
           <Card title="Saved addresses">
-            {c.addresses.length === 0 ? <p className="text-sm text-neutral-600">None saved.</p> : (
-              <ul className="flex flex-col gap-3 text-sm">
-                {c.addresses.map((a, i) => <li key={i}>{a.fullName}{seePii ? `, ${a.line1}` : ""}, {a.city}, {stateName(a.stateCode)} {a.pincode}{a.isDefault && <span className="ml-2"><Badge>default</Badge></span>}</li>)}
-              </ul>
+            {seePii ? (
+              <AddressBook
+                addresses={addresses}
+                save={saveCustomerAddressAction.bind(null, c.user.id)}
+                remove={deleteCustomerAddressAction.bind(null, c.user.id)}
+                makeDefault={defaultCustomerAddressAction.bind(null, c.user.id)}
+              />
+            ) : (
+              <p className="text-sm text-neutral-600">{c.addresses.length} saved. Addresses are visible to admins.</p>
             )}
           </Card>
           <Card title="Claims">

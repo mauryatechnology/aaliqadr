@@ -1,13 +1,16 @@
-import Link from "next/link";
-import type { Route } from "next";
 import { Suspense } from "react";
-import { Search } from "lucide-react";
+import { parseList } from "@/lib/list-params";
 import { adminUser } from "@/server/admin/guard";
-import { listAudit } from "@/server/admin/ops";
-import { adminDate } from "@/components/admin/format";
-import { AdminSkeleton, btnSecondary, Empty, inputCls, PageHeader, Table, td, th } from "@/components/admin/ui";
+import { listAuditPaged } from "@/server/admin/lists";
+import { LIST_SPECS } from "@/server/admin/list-kinds";
+import { AdminSkeleton, Empty, PageHeader } from "@/components/admin/ui";
+import { DataTable, type Column } from "@/components/admin/kit/DataTable";
+import { ListToolbar } from "@/components/admin/kit/ListToolbar";
+import { RelativeTime } from "@/components/admin/kit/Bits";
 
 export const metadata = { title: "Activity log" };
+
+const spec = LIST_SPECS.audit;
 
 export default function Page(props: PageProps<"/admin/audit">) {
   return (
@@ -20,33 +23,30 @@ export default function Page(props: PageProps<"/admin/audit">) {
 async function AdminAudit({ searchParams }: PageProps<"/admin/audit">) {
   const user = await adminUser("admin");
   if (!user) return <p className="text-sm text-neutral-600">Only admins can see the activity log.</p>;
-  const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q.slice(0, 60) : "";
-  const page = Math.max(1, Number(sp.page) || 1);
-  const { rows, total } = await listAudit(q, page);
+  const state = parseList(await searchParams, spec);
+  const { rows, total, kinds } = await listAuditPaged(state);
+  type Row = (typeof rows)[number];
+  const columns: Column<Row>[] = [
+    { key: "when", label: "When", sort: "date", cell: (a) => (a.createdAt ? <RelativeTime date={a.createdAt} /> : "") },
+    { key: "who", label: "Who", cell: (a) => <span className="flex flex-col"><span>{a.actor.name}</span><span className="text-xs text-neutral-500">{a.actor.role}</span></span> },
+    { key: "action", label: "Action", cell: (a) => <span className="font-mono text-xs">{a.action}</span> },
+    { key: "record", label: "Record", cell: (a) => <span className="block max-w-80 truncate" title={a.entity.id}>{a.entity.kind} · <span className="font-mono text-xs">{a.entity.id}</span></span> },
+    { key: "detail", label: "Detail", cell: (a) => (a.detail ? <span className="block max-w-72 truncate font-mono text-[11px] text-neutral-500" title={JSON.stringify(a.detail)}>{JSON.stringify(a.detail)}</span> : null) },
+  ];
   return (
     <>
-      <PageHeader title="Activity log" description="Every admin change, who made it and when. Entries can't be edited or deleted." />
-      <form action="/admin/audit" className="mb-4 flex gap-2">
-        <label className="relative"><span className="sr-only">Search</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" /><input name="q" defaultValue={q} placeholder="Action, record or person" className={`${inputCls} w-72 pl-9`} /></label>
-        <button className={btnSecondary}>Search</button>
-      </form>
-      {rows.length === 0 ? <Empty title="Nothing logged yet" /> : (
-        <Table>
-          <thead><tr><th className={th}>When</th><th className={th}>Who</th><th className={th}>Action</th><th className={th}>Record</th></tr></thead>
-          <tbody>
-            {rows.map((a, i) => (
-              <tr key={i}>
-                <td className={`${td} whitespace-nowrap`}>{a.createdAt ? adminDate.format(a.createdAt) : ""}</td>
-                <td className={td}>{a.actor.name}<span className="block text-xs text-neutral-500">{a.actor.role}</span></td>
-                <td className={`${td} font-mono text-xs`}>{a.action}</td>
-                <td className={td}>{a.entity.kind} · <span className="font-mono text-xs">{a.entity.id.slice(0, 60)}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-      )}
-      {total > page * 50 && <Link className={`${btnSecondary} mt-4`} href={`/admin/audit?q=${encodeURIComponent(q)}&page=${page + 1}` as Route}>Older</Link>}
+      <PageHeader title="Activity log" description="Every admin change and sign-in, who made it and when. Entries can't be edited or deleted." />
+      <ListToolbar
+        placeholder="Action, record or person"
+        exportKind="audit"
+        filters={[
+          { key: "kind", label: "Record", type: "multi", options: kinds.map((k) => ({ value: k, label: k })) },
+          { key: "role", label: "Role", type: "multi", options: ["owner", "admin", "staff", "customer", "system"].map((r) => ({ value: r, label: r })) },
+          { key: "from", label: "From", type: "date" },
+          { key: "to", label: "To", type: "date" },
+        ]}
+      />
+      <DataTable base="/admin/audit" spec={spec} state={state} total={total} rows={rows} columns={columns} rowKey={(a) => String(a._id)} empty={<Empty title="Nothing logged matches" />} />
     </>
   );
 }

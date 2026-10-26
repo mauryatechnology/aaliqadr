@@ -2,21 +2,28 @@
 
 import Link from "next/link";
 import { useId, useState, useRef } from "react";
-import { ArrowRight, Sparkles, Moon, Sun, Compass, Clock, MapPin, AlertTriangle, CheckCircle2, Loader2, User, Map } from "lucide-react";
+import { ArrowRight, Sparkles, Moon, Sun, Compass, Clock, MapPin, AlertTriangle, CheckCircle2, User, Map } from "lucide-react";
 import { SIGNS, type ZodiacSign } from "@/config/zodiac";
 import { formatSignDates, sunSignFor } from "@/lib/zodiac-math";
-import { calculateVedicMoon, type VedicMoonCalculation } from "@/lib/vedic-astro";
+import { calculatePanchang, calculateVedicMoon, type Panchang, type VedicMoonCalculation } from "@/lib/vedic-astro";
 import { GoogleTranslateWidget } from "@/components/zodiac/GoogleTranslateWidget";
-import { fetchExternalAstrologyAction, type ExternalAstrologyData } from "@/actions/astrology";
-import { FINDER_I18N, type SupportedLang } from "@/lib/finder-i18n";
+import { FINDER_EN, loadFinderTranslations, type FinderTranslations, type SupportedLang } from "@/lib/finder-i18n";
 import { PlaceSearch, type SelectedLocation } from "@/components/zodiac/PlaceSearch";
-import { MapLocationPicker } from "@/components/zodiac/MapLocationPicker";
+import dynamic from "next/dynamic";
+
+// The map (Leaflet + tiles) loads only when someone opens it (plan.md F6).
+const MapLocationPicker = dynamic(() => import("@/components/zodiac/MapLocationPicker").then((m) => m.MapLocationPicker), { ssr: false });
 import { routes } from "@/lib/routes";
 
 export function SignFinder() {
   const id = useId();
-  const [lang, setLang] = useState<SupportedLang>("en");
-  const t = FINDER_I18N[lang] || FINDER_I18N.en;
+  const [lang, setLangState] = useState<SupportedLang>("en");
+  const [t, setT] = useState<FinderTranslations>(FINDER_EN);
+  // Other languages load on demand, so English visitors never download them.
+  const setLang = (next: SupportedLang) => {
+    setLangState(next);
+    loadFinderTranslations(next).then(setT, () => setT(FINDER_EN));
+  };
 
   const [mode, setMode] = useState<"vedic" | "western" | "direct">("vedic");
 
@@ -40,9 +47,8 @@ export function SignFinder() {
   });
   const [vedicResult, setVedicResult] = useState<VedicMoonCalculation | null>(null);
 
-  // External API verification state
-  const [externalData, setExternalData] = useState<ExternalAstrologyData | null>(null);
-  const [isExternalLoading, setIsExternalLoading] = useState(false);
+  // Panchang at the birth moment, computed on this device (nothing leaves the browser).
+  const [panchang, setPanchang] = useState<Panchang | null>(null);
 
   // Western inputs
   const [westernDate, setWesternDate] = useState("");
@@ -62,7 +68,7 @@ export function SignFinder() {
   ) {
     if (!dateStr) {
       setVedicResult(null);
-      setExternalData(null);
+      setPanchang(null);
       return;
     }
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -89,26 +95,8 @@ export function SignFinder() {
       }, 50);
     }
 
-    // 2. Query keyless external Vedic API for live Panchang verification with exact coords
-    setIsExternalLoading(true);
-
-    fetchExternalAstrologyAction({
-      date: dateStr,
-      lat: loc.lat,
-      lng: loc.lng,
-      signSlug: calc.sign.slug,
-    })
-      .then((res) => {
-        if (res.ok && res.data) {
-          setExternalData(res.data);
-        }
-      })
-      .catch(() => {
-        // Safe fallback guaranteed
-      })
-      .finally(() => {
-        setIsExternalLoading(false);
-      });
+    // 2. Tithi and paksha from the same on-device ephemeris.
+    setPanchang(calculatePanchang(y, m, d, hour, min, loc.tz));
   }
 
   function handleWesternDate(value: string) {
@@ -324,17 +312,8 @@ export function SignFinder() {
               disabled={!vedicDate}
               className="mt-2 inline-flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-gold font-medium text-sm text-obsidian shadow-lg shadow-gold/15 transition-all hover:bg-gold-light hover:shadow-gold/25 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
             >
-              {isExternalLoading ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" />
-                  <span>{t.calculatingBtn}</span>
-                </>
-              ) : (
-                <>
-                  <span>{t.calculateBtn}</span>
-                  <ArrowRight className="size-4" />
-                </>
-              )}
+              <span>{t.calculateBtn}</span>
+              <ArrowRight className="size-4" />
             </button>
           </div>
 
@@ -346,7 +325,7 @@ export function SignFinder() {
       )}
 
       {/* Interactive Map Picker Modal */}
-      <MapLocationPicker
+      {isMapOpen && <MapLocationPicker
         isOpen={isMapOpen}
         onClose={() => setIsMapOpen(false)}
         currentLocation={location}
@@ -356,7 +335,7 @@ export function SignFinder() {
             handleVedicCalculate(vedicDate, vedicTime, unknownTime, newLoc);
           }
         }}
-      />
+      />}
 
       {/* Mode 2: Western Sun Sign Mode */}
       {mode === "western" && (
@@ -453,7 +432,7 @@ export function SignFinder() {
             sign={selectedSign}
             userName={userName}
             vedicCalculation={mode === "vedic" ? vedicResult : null}
-            externalData={mode === "vedic" ? externalData : null}
+            panchang={mode === "vedic" ? panchang : null}
             mode={mode}
             t={t}
           />
@@ -477,16 +456,16 @@ function FragranceResultCard({
   sign,
   userName,
   vedicCalculation,
-  externalData,
+  panchang,
   mode,
   t,
 }: {
   sign: ZodiacSign;
   userName?: string;
   vedicCalculation: VedicMoonCalculation | null;
-  externalData: ExternalAstrologyData | null;
+  panchang: Panchang | null;
   mode: "vedic" | "western" | "direct";
-  t: (typeof FINDER_I18N)["en"];
+  t: FinderTranslations;
 }) {
   return (
     <div
@@ -547,34 +526,20 @@ function FragranceResultCard({
         </p>
       </div>
 
-      {/* External API Verification Badge (Subtle, refined luxury styling) */}
-      {externalData && (
+      {/* Panchang at birth, computed on the device */}
+      {panchang && (
         <div className="w-full rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 text-left text-xs text-emerald-200/90 backdrop-blur-md">
           <div className="flex items-center gap-2 font-medium text-emerald-300">
             <CheckCircle2 className="size-3.5 text-emerald-400" />
             <span>{t.verifiedBadge}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[0.72rem] text-emerald-200/80">
-            {externalData.panchang?.nakshatra && (
-              <span>
-                <strong>Live Star:</strong> {externalData.panchang.nakshatra}
-              </span>
-            )}
-            {externalData.panchang?.tithi && (
-              <span>
-                <strong>Tithi:</strong> {externalData.panchang.tithi}
-              </span>
-            )}
-            {externalData.horoscope?.luckyColor && (
-              <span>
-                <strong>Lucky Astrological Color:</strong> {externalData.horoscope.luckyColor}
-              </span>
-            )}
-            {externalData.horoscope?.luckyNumber ? (
-              <span>
-                <strong>Lucky Number:</strong> {externalData.horoscope.luckyNumber}
-              </span>
-            ) : null}
+            <span>
+              <strong>Nakshatra:</strong> {panchang.nakshatra}
+            </span>
+            <span>
+              <strong>Tithi:</strong> {panchang.paksha} {panchang.tithi}
+            </span>
           </div>
         </div>
       )}

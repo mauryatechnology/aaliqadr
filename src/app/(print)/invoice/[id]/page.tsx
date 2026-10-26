@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { site } from "@/config/site";
+import { getBusiness } from "@/server/queries/business";
 import { stateName } from "@/config/india";
 import { amountInWords, formatPrice, splitInclusiveGst } from "@/lib/money";
 import { getSessionUser } from "@/server/auth";
@@ -28,6 +28,8 @@ async function Invoice({ params, searchParams }: Pick<PageProps<"/invoice/[id]">
   const found = await getOrderForViewer(id, viewer, typeof sp.k === "string" ? sp.k : undefined);
   if (!found?.order.invoice?.number) notFound();
   const o = found.order;
+  // The seller as on the day of issue; older invoices fall back to the current details.
+  const seller = o.seller ?? (await getBusiness());
   const inter = o.placeOfSupply.isInterState;
   const lines = o.items.map((i) => {
     const gross = i.lineTotalP - i.discountP;
@@ -44,9 +46,9 @@ async function Invoice({ params, searchParams }: Pick<PageProps<"/invoice/[id]">
       <header className="flex flex-wrap items-start justify-between gap-6 border-b border-neutral-300 pb-6">
         <div>
           <p className="text-xl font-semibold tracking-[0.3em]">AALIQADR</p>
-          <p className="mt-2 font-medium">{site.legal.legalName}</p>
-          <p className="max-w-xs text-neutral-600">{site.legal.address}</p>
-          {site.legal.gstin && <p className="mt-1">GSTIN: {site.legal.gstin}</p>}
+          <p className="mt-2 font-medium">{seller.legalName}</p>
+          <p className="max-w-xs text-neutral-600">{seller.address}</p>
+          {seller.gstin && <p className="mt-1">GSTIN: {seller.gstin}</p>}
         </div>
         <div className="text-right">
           <h1 className="text-2xl font-semibold">Tax Invoice</h1>
@@ -136,7 +138,7 @@ async function Invoice({ params, searchParams }: Pick<PageProps<"/invoice/[id]">
       <p className="mt-1 text-neutral-600">Whether tax is payable on reverse charge: No</p>
       <footer className="mt-12 flex justify-between border-t border-neutral-300 pt-4 text-neutral-500">
         <span>Computer-generated invoice; no signature required.</span>
-        <span>For {site.legal.legalName}</span>
+        <span>For {seller.legalName}</span>
       </footer>
     </main>
   );

@@ -15,11 +15,12 @@ import { adminNewOrderEmail, orderCancelledEmail, orderConfirmedEmail, orderDeli
 import { createGatewayOrder, findCapturedPayment, refundPayment, type GatewayPayment } from "@/server/integrations/razorpay";
 import { priceCart } from "./pricing";
 import { quoteCheckout, type Quote } from "./checkout";
-import { checkoutSettings, getSettings, pricingSettings } from "./settings";
+import { businessOf, checkoutSettings, getSettings, pricingSettings, sellerSnapshot } from "./settings";
 import { CouponError, consumeCoupon, releaseCoupon, reserveCoupon, validateCoupon } from "./coupons";
 import { commitSale, OutOfStockError, release, reserve, restock, SYSTEM, type Actor, type StockLine } from "./inventory";
 import { nextInvoiceNumber, nextOrderId } from "./ids";
 import { loadActiveProductsFresh, revalidateProducts } from "./products";
+import { isCodBlocked } from "./customers";
 
 /** Orders (docs/07). Every state change goes through here, inside a transaction where money or stock moves. */
 
@@ -64,7 +65,7 @@ const actorOf = (u?: { id: string; name: string; role: string }): Actor => (u ? 
 
 /** Prices a checkout from fresh catalogue data. Used by the quote action and by placeOrder. */
 export async function buildQuote(req: QuoteRequest): Promise<{ quote: Quote; warnings: string[] }> {
-  const [settings, products] = await Promise.all([getSettings(), loadActiveProductsFresh()]);
+  const [settings, products, codBlocked] = await Promise.all([getSettings(), loadActiveProductsFresh(), req.email ? isCodBlocked(req.email) : false]);
   const cart = priceCart(req.lines, products, pricingSettings(settings));
   if (cart.lines.length === 0) throw new OrderError("EMPTY", "Your bag is empty.");
   let coupon;
@@ -81,9 +82,10 @@ export async function buildQuote(req: QuoteRequest): Promise<{ quote: Quote; war
     method: req.method,
     giftWrap: req.giftWrap,
     shipToStateCode: req.stateCode,
-    storeStateCode: site.legal.stateCode,
+    storeStateCode: businessOf(settings).stateCode,
     coupon,
     settings: checkoutSettings(settings),
+    codBlocked,
   });
   return { quote, warnings: cart.warnings };
 }
@@ -113,7 +115,7 @@ function emailData(o: Pick<OrderDoc, "_id" | "contact" | "pricing" | "payment" |
     email: o.contact.email,
     totalP: o.pricing.totalP,
     paymentMethod: o.payment.method,
-    items: o.items.map((i) => ({ name: i.name, variantLabel: i.variantLabel, qty: i.qty, lineTotalP: i.lineTotalP - i.discountP })),
+    items: o.items.map((i) => ({ name: i.name, variantLabel: i.variantLabel, qty: i.qty, lineTotalP: i.lineTotalP - i.discountP, image: i.image })),
     url: orderUrl(o._id, accessKey),
   };
 }
@@ -172,6 +174,7 @@ export async function placeOrder(input: PlaceOrderInput, user?: { id: string; na
     lineTotalP: l.lineTotalP,
     hsnCode: l.hsnCode,
     gstRateBps: l.gstRateBps,
+    image: l.image,
   }));
 
   let order: OrderDoc;
@@ -215,6 +218,7 @@ export async function placeOrder(input: PlaceOrderInput, user?: { id: string; na
         await commitSale(stockLines(items), orderId, session, actor);
         if (quote.couponCode) await consumeCoupon(orderId, session);
         doc.invoice = { number: await nextInvoiceNumber(now, session), issuedAt: now };
+        doc.seller = sellerSnapshot(businessOf(settings));
       }
       await Order.create([doc], { session });
       return doc;
@@ -305,6 +309,7 @@ export async function markPaid(orderId: string, p: GatewayPayment, source: "call
       return "already" as const;
     }
     const invoiceNumber = await nextInvoiceNumber(now, session);
+    const seller = sellerSnapshot(businessOf(await getSettings()));
     const res = await Order.updateOne(
       { _id: o._id, status: fromStatus, "payment.status": { $ne: "paid" } },
       {
@@ -314,6 +319,7 @@ export async function markPaid(orderId: string, p: GatewayPayment, source: "call
           "payment.razorpayPaymentId": p.id,
           "payment.paidAt": now,
           invoice: { number: invoiceNumber, issuedAt: now },
+          seller,
         },
         $unset: { reservationExpiresAt: 1 },
         $push: { history: { at: now, status: "confirmed", note: `Paid online (${p.method || "Razorpay"})`, actor, visibleToCustomer: true } },

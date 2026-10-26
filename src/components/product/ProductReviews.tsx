@@ -1,15 +1,13 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
-import { BadgeCheck, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { getSessionUser } from "@/server/auth";
 import { getProductReviews } from "@/server/queries/engagement";
 import { hasBought } from "@/server/services/reviews";
 import { routes } from "@/lib/routes";
 import { Reveal } from "@/components/motion/Reveal";
 import { ReviewForm } from "./ReviewForm";
-
-const date = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeZone: "Asia/Kolkata" });
+import { ReviewList } from "./ReviewList";
 
 function Stars({ value, size = "size-4" }: { value: number; size?: string }) {
   return (
@@ -54,31 +52,7 @@ export async function ProductReviews({ productId, slug, ratingAvg, ratingCount }
             <WriteReview productId={productId} slug={slug} />
           </Suspense>
         </div>
-        <ul className="flex flex-col divide-y divide-white/10">
-          {reviews.map((r) => (
-            <li key={r.id} className="flex flex-col gap-2 py-6 first:pt-0">
-              <div className="flex flex-wrap items-center gap-3">
-                <Stars value={r.rating} />
-                {r.title && <p className="font-medium">{r.title}</p>}
-              </div>
-              <p className="text-muted leading-relaxed whitespace-pre-line">{r.body}</p>
-              {r.photos.length > 0 && (
-                <div className="flex gap-2">
-                  {r.photos.map((p) => (
-                    <a key={p.url} href={p.url} target="_blank" rel="noreferrer" className="relative size-20 overflow-hidden rounded-lg">
-                      <Image src={p.url} alt={`Photo from ${r.name}`} fill sizes="80px" className="object-cover" />
-                    </a>
-                  ))}
-                </div>
-              )}
-              <p className="text-muted flex flex-wrap items-center gap-2 text-xs">
-                {r.name} · {date.format(new Date(r.date))}
-                {r.verified && <span className="inline-flex items-center gap-1 text-accent"><BadgeCheck className="size-3.5" /> Verified purchase</span>}
-              </p>
-              {r.reply && <p className="mt-2 border-l-2 pl-3 text-sm" style={{ borderColor: "var(--z-primary)" }}><span className="text-fg">Aaliqadr:</span> <span className="text-muted">{r.reply}</span></p>}
-            </li>
-          ))}
-        </ul>
+        <ReviewList reviews={reviews} />
       </div>
     </section>
   );

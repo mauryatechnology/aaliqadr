@@ -7,10 +7,13 @@ import { SmoothScroll } from "@/components/motion/SmoothScroll";
 import { ParallaxRuntime } from "@/components/motion/ParallaxRuntime";
 import { JsonLd, organizationLd } from "@/lib/jsonld";
 import { AnnouncementBar } from "@/components/content/AnnouncementBar";
-import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartDrawerHost } from "@/components/cart/CartDrawerHost";
+import { SearchHost } from "@/components/search/SearchHost";
+import { getContent } from "@/server/queries/engagement";
 
 /** Storefront frame: sky, header, footer and motion runtime. Used by (store) and the 404 page. */
-export function StoreChrome({ children }: { children: ReactNode }) {
+export async function StoreChrome({ children }: { children: ReactNode }) {
+  const { search } = await getContent();
   return (
     <>
       <a href="#main" className="sr-only z-50 rounded-full bg-gold px-4 py-2 text-obsidian focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
@@ -24,7 +27,8 @@ export function StoreChrome({ children }: { children: ReactNode }) {
       </main>
       <Footer />
       <MobileBottomNav />
-      <CartDrawer />
+      <CartDrawerHost />
+      <SearchHost popular={search.popular} />
       <SmoothScroll />
       <ParallaxRuntime />
       <JsonLd data={organizationLd()} />

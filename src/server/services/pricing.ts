@@ -1,6 +1,7 @@
 import type { ZodiacSlug } from "@/config/zodiac";
 import type { Paise } from "@/lib/money";
 import type { ProductDTO } from "@/server/catalog/types";
+import { coverFor } from "@/lib/variant-media";
 
 /**
  * Cart pricing (docs/07 §2). Pure: given catalogue data and requested lines, returns the
@@ -97,7 +98,11 @@ export function priceCart(input: CartLineInput[], products: ProductDTO[], settin
       name: p.name,
       variantLabel: v.label,
       zodiacSign: p.zodiacSign,
-      image: p.media[0]?.url,
+      // The variant's own cover (plan.md §8.3); bottle artwork SVGs stay a client-side fallback.
+      image: (() => {
+        const url = coverFor(p, v.sku)?.url;
+        return url && !url.endsWith(".svg") ? url : undefined;
+      })(),
       qty,
       unitPriceP: v.priceP,
       mrpP: v.mrpP,

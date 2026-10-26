@@ -7,9 +7,9 @@ import { cn } from "@/lib/cn";
 
 export function PageHeader({ title, description, actions }: { title: string; description?: string; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight text-neutral-900">{title}</h1>
         {description && <p className="mt-1 text-sm text-neutral-600">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -21,12 +21,12 @@ export function Card({ title, children, className, actions }: { title?: string; 
   return (
     <section className={cn("rounded-xl border border-neutral-200 bg-white shadow-sm", className)}>
       {(title || actions) && (
-        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-5 py-3.5">
+        <div className="flex items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3">
           {title && <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>}
           {actions}
         </div>
       )}
-      <div className="p-5">{children}</div>
+      <div className="p-4">{children}</div>
     </section>
   );
 }
@@ -35,11 +35,11 @@ export function Stat({ label, value, hint, href }: { label: string; value: strin
   const body = (
     <>
       <p className="text-sm text-neutral-600">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums text-neutral-900">{value}</p>
+      <p className="mt-0.5 text-xl font-semibold tabular-nums text-neutral-900">{value}</p>
       {hint && <p className="mt-1 text-xs text-neutral-500">{hint}</p>}
     </>
   );
-  const cls = "rounded-xl border border-neutral-200 bg-white p-5 shadow-sm";
+  const cls = "rounded-xl border border-neutral-200 bg-white px-4 py-3 shadow-sm";
   return href ? (
     <Link href={href} className={cn(cls, "transition-colors hover:border-neutral-400")}>
       {body}
@@ -96,14 +96,16 @@ export function Table({ children, className, compact = false }: { children: Reac
     </div>
   );
 }
-export const th = "border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-neutral-600";
-export const td = "border-b border-neutral-100 px-4 py-3 align-middle text-neutral-800";
+export const th = "border-b border-neutral-200 bg-neutral-50 px-(--adm-px) py-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-600";
+export const td = "border-b border-neutral-100 px-(--adm-px) py-(--adm-py) align-middle text-neutral-800";
 
-export function Empty({ title, children }: { title: string; children?: ReactNode }) {
+/** Empty state with an optional next step (plan.md §2.2). */
+export function Empty({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-12 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-neutral-300 bg-white px-6 py-10 text-center">
       <p className="font-medium text-neutral-900">{title}</p>
       {children && <div className="text-sm text-neutral-600">{children}</div>}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

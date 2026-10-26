@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Camera, Loader2, Video, X } from "lucide-react";
 import { submitReturnAction } from "@/actions/engagement";
-import { uploadImage, uploadVideo } from "@/lib/upload-client";
 import { cn } from "@/lib/cn";
 
 const REASONS = {
@@ -33,6 +32,7 @@ export function ClaimForm({ orderId, accessKey, items, userId, until }: { orderI
     try {
       for (const f of Array.from(files).slice(0, 6 - evidence.length)) {
         setBusy(`Uploading ${f.name}…`);
+        const { uploadImage, uploadVideo } = await import("@/lib/upload-client");
         const video = f.type.startsWith("video/");
         const up = video ? await uploadVideo(f, `returns/${userId}/${orderId}`) : await uploadImage(f, `returns/${userId}/${orderId}`);
         setEvidence((e) => [...e, { url: up.url, kind: video ? "video" : "image", name: f.name }]);

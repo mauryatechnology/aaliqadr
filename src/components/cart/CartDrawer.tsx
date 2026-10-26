@@ -10,7 +10,7 @@ import { formatPrice } from "@/lib/money";
 import type { CartView as View } from "@/server/services/pricing";
 import { routes } from "@/lib/routes";
 import { site } from "@/config/site";
-import { cn } from "@/lib/cn";
+import { cx as cn } from "@/lib/cx";
 
 export function CartDrawer() {
   const [isOpen, setDrawerOpen] = useCartDrawer();

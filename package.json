@@ -16,7 +16,12 @@
     "db:seed": "tsx --env-file=.env --conditions=react-server scripts/db-seed.ts",
     "db:migrate-catalog": "tsx --env-file=.env --conditions=react-server scripts/db-migrate-catalog.ts",
     "db:seed:admin": "tsx --env-file=.env scripts/seed-admin.ts",
-    "db:sync-indexes": "tsx --env-file=.env --conditions=react-server scripts/db-sync-indexes.ts"
+    "db:sync-indexes": "tsx --env-file=.env --conditions=react-server scripts/db-sync-indexes.ts",
+    "budget": "node scripts/ci/bundle-budget.mjs 170",
+    "check:finder": "node scripts/dev/finder-check.mjs",
+    "check:drafts": "node --env-file=.env scripts/dev/product-drafts-check.mjs",
+    "check:admin": "node --env-file=.env scripts/dev/admin-check.mjs",
+    "check:search": "node scripts/dev/search-check.mjs"
   },
   "dependencies": {
     "@upstash/ratelimit": "^2.2.0",

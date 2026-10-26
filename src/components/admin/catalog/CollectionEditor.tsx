@@ -14,6 +14,7 @@ import { cn } from "@/lib/cn";
 import { routes } from "@/lib/routes";
 import { Badge, btnPrimary, btnSecondary, Card, FieldLabel, inputCls, STATUS_TONE } from "../ui";
 import { FormStatus } from "../FormStatus";
+import { useUnsavedGuard } from "../useUnsavedGuard";
 import { ConfirmButton, ImageField, Switch } from "../widgets";
 
 export interface PickerProduct {
@@ -60,6 +61,8 @@ const OPS_FOR: Record<RuleField, RuleOp[]> = {
 export function CollectionEditor({ initial, products, categories, isNew }: { initial: CollectionInput; products: PickerProduct[]; categories: { slug: string; label: string }[]; isNew: boolean }) {
   const router = useRouter();
   const [c, setC] = useState<CollectionInput>(initial);
+  const [saved, setSaved] = useState(() => JSON.stringify(initial));
+  useUnsavedGuard(JSON.stringify(c) !== saved);
   const [state, setState] = useState<FormState>({});
   const [pending, start] = useTransition();
   const [slugTouched, setSlugTouched] = useState(!isNew);
@@ -80,6 +83,7 @@ export function CollectionEditor({ initial, products, categories, isNew }: { ini
     start(async () => {
       const res = await saveCollectionAction(c);
       setState(res);
+      if (res.ok) setSaved(JSON.stringify(c));
       if (res.ok && isNew && res.id) router.replace(routes.adminCollection(res.id));
       else if (res.ok) router.refresh();
     });

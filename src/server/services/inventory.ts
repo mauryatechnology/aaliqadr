@@ -2,6 +2,7 @@ import "server-only";
 import type { ClientSession } from "mongoose";
 import { Product } from "@/server/models/Product";
 import { StockMovement, type StockMovementDoc } from "@/server/models/commerce";
+import { notifyRestock } from "./alerts";
 
 /**
  * Stock (docs/07 §10). `stock` is sellable; `reserved` is held by unpaid orders. Every change is
@@ -82,7 +83,10 @@ export async function adjust(line: StockLine & { delta: number }, reason: string
     line.delta < 0
       ? { _id: line.productId, variants: { $elemMatch: { sku: line.sku, stock: { $gte: -line.delta } } } }
       : { _id: line.productId, "variants.sku": line.sku };
+  const before = line.delta > 0 ? await Product.findOne({ _id: line.productId, "variants.sku": line.sku }, { "variants.$": 1 }).lean() : null;
   const res = await Product.updateOne(filter, { $inc: { "variants.$.stock": line.delta } });
   if (res.modifiedCount !== 1) throw new OutOfStockError(line.sku);
   await StockMovement.create({ sku: line.sku, productId: line.productId, type: line.delta > 0 ? "receive" : "adjust", qty: line.delta, reason, actor });
+  // Back from zero: tell the people waiting for it (plan.md §10.3).
+  if (before && (before.variants[0]?.stock ?? 0) <= 0) notifyRestock(String(line.productId), [line.sku]);
 }

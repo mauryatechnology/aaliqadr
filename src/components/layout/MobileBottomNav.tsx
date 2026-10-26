@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Compass, Home, Search, Sparkles } from "lucide-react";
 import { CartButton } from "./CartButton";
+import { SearchLink } from "@/components/search/SearchHost";
 
 const ITEMS: { href: Route; label: string; Icon: typeof Home }[] = [
   { href: "/", label: "Home", Icon: Home },
@@ -17,12 +18,19 @@ export function MobileBottomNav() {
       aria-label="Quick"
       className="fixed inset-x-0 bottom-0 z-40 flex items-center justify-around border-t border-white/10 bg-[color-mix(in_oklab,var(--z-bg)_80%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
     >
-      {ITEMS.map(({ href, label, Icon }) => (
-        <Link key={href} href={href} className="flex min-w-14 flex-col items-center gap-0.5 py-2 text-[10px] text-fg/75 hover:text-gold">
-          <Icon className="size-5" strokeWidth={1.5} aria-hidden />
-          {label}
-        </Link>
-      ))}
+      {ITEMS.map(({ href, label, Icon }) =>
+        href === "/search" ? (
+          <SearchLink key={href} label="Search" className="flex min-w-14 flex-col items-center gap-0.5 py-2 text-[10px] text-fg/75 hover:text-gold">
+            <Icon className="size-5" strokeWidth={1.5} aria-hidden />
+            {label}
+          </SearchLink>
+        ) : (
+          <Link key={href} href={href} className="flex min-w-14 flex-col items-center gap-0.5 py-2 text-[10px] text-fg/75 hover:text-gold">
+            <Icon className="size-5" strokeWidth={1.5} aria-hidden />
+            {label}
+          </Link>
+        ),
+      )}
       <div className="flex min-w-14 flex-col items-center text-[10px] text-fg/75">
         <CartButton />
       </div>

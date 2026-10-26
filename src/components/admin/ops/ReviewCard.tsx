@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { BadgeCheck, Check, EyeOff, Loader2, Star } from "lucide-react";
-import { deleteReviewAction, moderateReviewAction, replyReviewAction } from "@/actions/admin/engagement";
+import { deleteReviewAction, editReviewAction, moderateReviewAction, replyReviewAction } from "@/actions/admin/engagement";
 import type { FormState } from "@/actions/admin/shared";
 import { Badge, btnPrimary, btnSecondary, inputCls } from "../ui";
 import { FormStatus } from "../FormStatus";
@@ -26,18 +26,21 @@ export interface ReviewRow {
   createdAt: string;
 }
 
-export function ReviewCard({ r, canDelete }: { r: ReviewRow; canDelete: boolean }) {
+export function ReviewCard({ r, canDelete, selectForm }: { r: ReviewRow; canDelete: boolean; selectForm?: string }) {
   const router = useRouter();
   const [state, setState] = useState<FormState>({});
   const [reply, setReply] = useState(r.reply);
   const [replying, setReplying] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState({ title: r.title, body: r.body });
   const [pending, start] = useTransition();
   const run = (fn: () => Promise<FormState>) => start(async () => { const res = await fn(); setState(res); if (res.ok) router.refresh(); });
 
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        {selectForm && <input type="checkbox" form={selectForm} name="ids" value={r.id} aria-label={`Select review by ${r.name}`} className="mt-1 size-4" />}
+        <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-sm font-medium">
             <span className="flex text-amber-500" aria-label={`${r.rating} stars`}>{[1, 2, 3, 4, 5].map((n) => <Star key={n} className="size-4" fill={n <= r.rating ? "currentColor" : "none"} />)}</span>
             {r.title}
@@ -49,7 +52,19 @@ export function ReviewCard({ r, canDelete }: { r: ReviewRow; canDelete: boolean 
         </div>
         <Badge tone={r.status === "approved" ? "green" : r.status === "pending" ? "amber" : "neutral"}>{r.status}</Badge>
       </div>
-      <p className="whitespace-pre-line text-sm text-neutral-800">{r.body}</p>
+      {editing ? (
+        <div className="flex flex-col gap-2">
+          <input className={inputCls} value={text.title} maxLength={120} onChange={(e) => setText({ ...text, title: e.target.value })} aria-label="Title" />
+          <textarea className={`${inputCls} h-auto py-2`} rows={4} maxLength={4000} value={text.body} onChange={(e) => setText({ ...text, body: e.target.value })} aria-label="Review text" />
+          <p className="text-xs text-neutral-500">Fix typos only; the original stays in the activity log.</p>
+          <div className="flex gap-2">
+            <button type="button" className={btnPrimary} disabled={pending} onClick={() => run(async () => { const res = await editReviewAction(r.id, text); if (res.ok) setEditing(false); return res; })}>Save</button>
+            <button type="button" className={btnSecondary} onClick={() => { setEditing(false); setText({ title: r.title, body: r.body }); }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-line text-sm text-neutral-800">{r.body}</p>
+      )}
       {r.photos.length > 0 && (
         <div className="flex gap-2">
           {r.photos.map((p) => <a key={p.url} href={p.url} target="_blank" rel="noreferrer" className="relative size-16 overflow-hidden rounded-md"><Image src={p.url} alt="" fill sizes="64px" className="object-cover" /></a>)}
@@ -70,6 +85,7 @@ export function ReviewCard({ r, canDelete }: { r: ReviewRow; canDelete: boolean 
         {r.status !== "approved" && <button type="button" className={btnPrimary} disabled={pending} onClick={() => run(() => moderateReviewAction(r.id, "approved"))}>{pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />} Publish</button>}
         {r.status !== "rejected" && <button type="button" className={btnSecondary} disabled={pending} onClick={() => run(() => moderateReviewAction(r.id, "rejected"))}><EyeOff className="size-4" /> Hide</button>}
         {!replying && <button type="button" className={btnSecondary} onClick={() => setReplying(true)}>{r.reply ? "Edit reply" : "Reply"}</button>}
+        {canDelete && !editing && <button type="button" className={btnSecondary} onClick={() => setEditing(true)}>Fix typo</button>}
         {canDelete && <ConfirmButton confirm="Delete this review permanently?" action={() => deleteReviewAction(r.id)} onDone={(res) => { setState(res); router.refresh(); }}>Delete</ConfirmButton>}
         <FormStatus state={state} />
       </div>

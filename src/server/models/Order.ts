@@ -31,6 +31,8 @@ export interface OrderItem {
   lineTotalP: number;
   hsnCode: string;
   gstRateBps: number;
+  /** The variant's cover at purchase time (bag, emails, account, admin, packing slip). */
+  image?: string;
 }
 
 export interface OrderHistoryEntry {
@@ -70,6 +72,8 @@ export interface OrderDoc {
   payment: { method: PaymentMethod; status: PaymentStatus; razorpayOrderId?: string; razorpayPaymentId?: string; paidAt?: Date; refundedP: number };
   shipment?: { courier?: string; awb?: string; trackingUrl?: string; shippedAt?: Date; deliveredAt?: Date };
   invoice?: { number?: string; issuedAt?: Date };
+  /** Seller as printed on the invoice when it was issued (later edits don't change it). */
+  seller?: { legalName: string; address: string; gstin: string; stateCode: string };
   reservationExpiresAt?: Date;
   history: OrderHistoryEntry[];
   notesInternal?: string;
@@ -106,6 +110,7 @@ const ItemSchema = new Schema<OrderItem>(
     discountP: { type: Number, default: 0 },
     lineTotalP: { type: Number, required: true },
     hsnCode: { type: String, required: true },
+    image: String,
     gstRateBps: { type: Number, required: true },
   },
   { _id: false },
@@ -164,6 +169,7 @@ const OrderSchema = new Schema<OrderDoc>(
       deliveredAt: Date,
     },
     invoice: { number: String, issuedAt: Date },
+    seller: { legalName: String, address: String, gstin: String, stateCode: String },
     reservationExpiresAt: Date,
     history: { type: [HistorySchema], default: [] },
     notesInternal: { type: String, select: false },

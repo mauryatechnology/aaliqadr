@@ -10,18 +10,33 @@ import { cn } from "@/lib/cn";
 import type { PolicySlug, PolicyText } from "@/config/policies";
 import { btnPrimary, btnSecondary, Card, FieldLabel, inputCls } from "../ui";
 import { FormStatus } from "../FormStatus";
-import { ImageField, Switch, type ImageValue } from "../widgets";
+import { useUnsavedGuard } from "../useUnsavedGuard";
+import { ChipInput, ImageField, Switch, type ImageValue } from "../widgets";
 
-interface Banner { id: string; title: string; subtitle?: string; cta?: string; href?: string; image?: ImageValue; active: boolean }
+interface Banner { id: string; title: string; subtitle?: string; cta?: string; href?: string; image?: ImageValue; active: boolean; startsAt?: string; endsAt?: string }
 interface Faq { id: string; question: string; answer: string; group: string }
 export interface ContentValue {
-  announcement: { text: string; href?: string; active: boolean };
+  announcement: { text: string; href?: string; active: boolean; startsAt?: string; endsAt?: string };
   banners: Banner[];
   faqs: Faq[];
+  search: { popular: string[]; synonyms: string[][] };
 }
 
-const TABS = [["announcement", "Announcement bar"], ["banners", "Home banners"], ["faqs", "FAQs"], ["policies", "Policies"]] as const;
+const TABS = [["announcement", "Announcement bar"], ["banners", "Home banners"], ["faqs", "FAQs"], ["search", "Search"], ["policies", "Policies"]] as const;
 type Tab = (typeof TABS)[number][0];
+
+/** ISO ↔ datetime-local in India time (IST has no daylight saving). */
+const toLocal = (iso?: string) => (iso ? new Date(Date.parse(iso) + 330 * 60_000).toISOString().slice(0, 16) : "");
+const fromLocal = (v: string) => (v ? new Date(`${v}:00+05:30`).toISOString() : "");
+
+function Schedule({ value, onChange }: { value: { startsAt?: string; endsAt?: string }; onChange: (v: { startsAt: string; endsAt: string }) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <FieldLabel label="Show from (optional)" hint="India time"><input type="datetime-local" className={inputCls} value={toLocal(value.startsAt)} onChange={(e) => onChange({ startsAt: fromLocal(e.target.value), endsAt: value.endsAt ?? "" })} /></FieldLabel>
+      <FieldLabel label="Hide after (optional)" hint="India time"><input type="datetime-local" className={inputCls} value={toLocal(value.endsAt)} onChange={(e) => onChange({ startsAt: value.startsAt ?? "", endsAt: fromLocal(e.target.value) })} /></FieldLabel>
+    </div>
+  );
+}
 
 function move<T>(list: T[], i: number, d: -1 | 1): T[] {
   const j = i + d;
@@ -39,10 +54,12 @@ export function ContentEditor({ initial, policies, history }: { initial: Content
   const [pending, start] = useTransition();
   const [policyKey, setPolicyKey] = useState<PolicySlug>("shipping");
   const [policy, setPolicy] = useState<Record<PolicySlug, PolicyText>>(policies);
+  const [saved, setSaved] = useState(() => JSON.stringify([initial, policies]));
+  useUnsavedGuard(JSON.stringify([c, policy]) !== saved);
   const p = policy[policyKey];
 
-  const save = () => start(async () => { const res = await saveContentAction(c); setState(res); if (res.ok) router.refresh(); });
-  const publish = () => start(async () => { const res = await publishPolicyAction({ key: policyKey, ...p }); setState(res); if (res.ok) router.refresh(); });
+  const save = () => start(async () => { const res = await saveContentAction({ ...c, search: { ...c.search, synonyms: c.search.synonyms.filter((g) => g.length >= 2) } }); setState(res); if (res.ok) { setSaved(JSON.stringify([c, JSON.parse(saved)[1]])); router.refresh(); } });
+  const publish = () => start(async () => { const res = await publishPolicyAction({ key: policyKey, ...p }); setState(res); if (res.ok) { const [savedContent, savedPolicies] = JSON.parse(saved); setSaved(JSON.stringify([savedContent, { ...savedPolicies, [policyKey]: p }])); router.refresh(); } });
   const setPolicyField = (patch: Partial<PolicyText>) => setPolicy({ ...policy, [policyKey]: { ...p, ...patch } });
 
   return (
@@ -57,6 +74,7 @@ export function ContentEditor({ initial, policies, history }: { initial: Content
             <FieldLabel label="Message" hint={`${c.announcement.text.length}/160`}><input className={inputCls} maxLength={160} value={c.announcement.text} onChange={(e) => setC({ ...c, announcement: { ...c.announcement, text: e.target.value } })} placeholder="Free shipping above ₹1,499 · Diwali gifting is live" /></FieldLabel>
             <FieldLabel label="Link (optional)"><input className={inputCls} value={c.announcement.href ?? ""} onChange={(e) => setC({ ...c, announcement: { ...c.announcement, href: e.target.value || undefined } })} placeholder="/collections/gifting" /></FieldLabel>
             <Switch checked={c.announcement.active} onChange={(active) => setC({ ...c, announcement: { ...c.announcement, active } })} label="Show the bar" />
+            <div className="md:col-span-2"><Schedule value={c.announcement} onChange={(w) => setC({ ...c, announcement: { ...c.announcement, ...w } })} /></div>
           </div>
         </Card>
       )}
@@ -74,6 +92,7 @@ export function ContentEditor({ initial, policies, history }: { initial: Content
                     <FieldLabel label="Button text"><input className={inputCls} maxLength={30} value={b.cta ?? ""} onChange={(e) => setC({ ...c, banners: c.banners.map((x) => (x.id === b.id ? { ...x, cta: e.target.value } : x)) })} placeholder="Shop the edit" /></FieldLabel>
                     <FieldLabel label="Link"><input className={inputCls} value={b.href ?? ""} onChange={(e) => setC({ ...c, banners: c.banners.map((x) => (x.id === b.id ? { ...x, href: e.target.value } : x)) })} placeholder="/collections/gifting" /></FieldLabel>
                   </div>
+                  <Schedule value={b} onChange={(w) => setC({ ...c, banners: c.banners.map((x) => (x.id === b.id ? { ...x, ...w } : x)) })} />
                   <div className="flex flex-wrap items-center gap-3">
                     <Switch checked={b.active} onChange={(active) => setC({ ...c, banners: c.banners.map((x) => (x.id === b.id ? { ...x, active } : x)) })} label="Live" />
                     <span className="flex-1" />
@@ -107,6 +126,27 @@ export function ContentEditor({ initial, policies, history }: { initial: Content
               </div>
             ))}
             <button type="button" className={cn(btnSecondary, "self-start")} onClick={() => setC({ ...c, faqs: [...c.faqs, { id: newId(), question: "", answer: "", group: c.faqs.at(-1)?.group ?? "General" }] })}><Plus className="size-4" /> Add question</button>
+          </div>
+        </Card>
+      )}
+
+      {tab === "search" && (
+        <Card title="Storefront search" actions={<span className="text-xs text-neutral-500">Used by the search box on every page</span>}>
+          <div className="flex flex-col gap-5">
+            <FieldLabel label="Popular searches" hint="Suggested before the shopper types. Press Enter after each.">
+              <ChipInput value={c.search.popular} max={12} onChange={(popular) => setC({ ...c, search: { ...c.search, popular } })} placeholder="oud, gift for her, Leo" />
+            </FieldLabel>
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-medium text-neutral-800">Synonyms</p>
+              <p className="text-xs text-neutral-500">Words in one group find each other (e.g. rajnigandha, tuberose). Built in already: rashi names, kesar/saffron, chandan/sandalwood, gulab/rose, oud/agarwood and more.</p>
+              {c.search.synonyms.map((g, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="flex-1"><ChipInput value={g} max={10} lowercase onChange={(words) => setC({ ...c, search: { ...c.search, synonyms: c.search.synonyms.map((x, j) => (j === i ? words : x)) } })} placeholder="word, another word" /></div>
+                  <button type="button" aria-label="Delete group" onClick={() => setC({ ...c, search: { ...c.search, synonyms: c.search.synonyms.filter((_, j) => j !== i) } })} className="rounded p-2 text-neutral-500 hover:bg-red-50 hover:text-red-700"><Trash2 className="size-4" /></button>
+                </div>
+              ))}
+              <button type="button" className={cn(btnSecondary, "self-start")} onClick={() => setC({ ...c, search: { ...c.search, synonyms: [...c.search.synonyms, []] } })}><Plus className="size-4" /> Add a synonym group</button>
+            </div>
           </div>
         </Card>
       )}

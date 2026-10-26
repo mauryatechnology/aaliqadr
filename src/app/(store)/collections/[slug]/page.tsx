@@ -6,7 +6,7 @@ import { breadcrumbLd, collectionPageLd, JsonLd } from "@/lib/jsonld";
 import { SEED_COLLECTIONS } from "@/server/catalog/seed";
 import { getCollectionCards, getCollections } from "@/server/queries/catalog";
 import { PageHero } from "@/components/layout/PageHero";
-import { ProductGrid } from "@/components/product/ProductGrid";
+import { FacetedSection } from "@/components/listing/FacetedSection";
 
 // Every collection is prerendered; its products are the URL's content.
 export const instant = false;
@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: PageProps<"/collections/[slug
   return { title, description, alternates: { canonical: `/collections/${slug}` }, openGraph: { title, description, url: `/collections/${slug}`, ...(image ? { images: [image.url] } : {}) } };
 }
 
-export default async function CollectionPage({ params }: PageProps<"/collections/[slug]">) {
+export default async function CollectionPage({ params, searchParams }: PageProps<"/collections/[slug]">) {
   const { slug } = await params;
   const data = await getCollectionCards(slug);
   if (!data) notFound();
@@ -43,8 +43,7 @@ export default async function CollectionPage({ params }: PageProps<"/collections
             <Image src={c.banner.url} alt={c.banner.alt || c.name} fill sizes="(min-width: 1360px) 1360px, 100vw" className="object-cover" preload />
           </div>
         )}
-        <p className="text-muted mb-6 text-sm">{cards.length} {cards.length === 1 ? "product" : "products"}</p>
-        {cards.length ? <ProductGrid items={cards} /> : <p className="text-muted">This collection is being curated. <Link href="/shop" className="underline underline-offset-4">Browse everything</Link>.</p>}
+        {cards.length ? <FacetedSection cards={cards} base={`/collections/${slug}`} searchParams={searchParams} /> : <p className="text-muted">This collection is being curated. <Link href="/shop" className="underline underline-offset-4">Browse everything</Link>.</p>}
       </div>
       <JsonLd data={collectionPageLd({ name: c.name, description: c.description, path: `/collections/${slug}`, items: cards.map((x) => ({ name: x.name, path: `/perfume/${x.slug}`, image: x.media[0]?.url })) })} />
       <JsonLd data={breadcrumbLd([{ name: "Home", path: "/" }, { name: "Collections", path: "/collections" }, { name: c.name, path: `/collections/${slug}` }])} />

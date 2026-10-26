@@ -1,5 +1,4 @@
 import "server-only";
-import { site } from "@/config/site";
 import { formatPrice } from "@/lib/money";
 import type { Mail } from "./mailer";
 
@@ -23,7 +22,7 @@ function layout(title: string, bodyHtml: string, cta?: { label: string; href: st
 ${bodyHtml}
 ${button}
 </table></td></tr>
-<tr><td style="padding:20px 32px 28px;border-top:1px solid #EFE6D2;font:13px/1.6 Arial,sans-serif;color:#6B645B">${esc(site.legal.legalName)}, ${esc(site.legal.city)}, ${esc(site.legal.state)}<br>Questions? Reply to this email.</td></tr>
+<tr><td style="padding:20px 32px 28px;border-top:1px solid #EFE6D2;font:13px/1.6 Arial,sans-serif;color:#6B645B"><!--seller--><br>Questions? Reply to this email.</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -49,7 +48,7 @@ export interface OrderEmailData {
   email: string;
   totalP: number;
   paymentMethod: "razorpay" | "cod";
-  items: { name: string; variantLabel: string; qty: number; lineTotalP: number }[];
+  items: { name: string; variantLabel: string; qty: number; lineTotalP: number; image?: string }[];
   url: string;
 }
 
@@ -57,7 +56,7 @@ function itemsTable(o: OrderEmailData): string {
   const rows = o.items
     .map(
       (i) =>
-        `<tr><td style="font:15px/1.5 Arial,sans-serif;color:#3A352F;padding:8px 0;border-bottom:1px solid #EFE6D2">${esc(i.name)} · ${esc(i.variantLabel)} × ${i.qty}</td><td align="right" style="font:15px/1.5 Arial,sans-serif;color:#1A1714;padding:8px 0;border-bottom:1px solid #EFE6D2">${formatPrice(i.lineTotalP)}</td></tr>`,
+        `<tr><td style="font:15px/1.5 Arial,sans-serif;color:#3A352F;padding:8px 0;border-bottom:1px solid #EFE6D2">${i.image && /^https:\/\//.test(i.image) ? `<img src="${esc(i.image)}" width="40" height="50" alt="" style="vertical-align:middle;border-radius:6px;object-fit:cover;margin-right:10px">` : ""}${esc(i.name)} · ${esc(i.variantLabel)} × ${i.qty}</td><td align="right" style="font:15px/1.5 Arial,sans-serif;color:#1A1714;padding:8px 0;border-bottom:1px solid #EFE6D2">${formatPrice(i.lineTotalP)}</td></tr>`,
     )
     .join("");
   return `<tr><td style="padding-bottom:18px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}<tr><td style="font:600 16px/1.5 Arial,sans-serif;color:#1A1714;padding-top:12px">Total</td><td align="right" style="font:600 16px/1.5 Arial,sans-serif;color:#1A1714;padding-top:12px">${formatPrice(o.totalP)}</td></tr></table></td></tr>`;
@@ -153,5 +152,58 @@ export function adminNewReturnEmail(to: string, r: { id: string; orderId: string
     subject: `New claim ${r.id} on ${r.orderId}: ${r.reason}`,
     html: layout(`New claim ${r.id}`, p(`${esc(r.name)} reported a problem with order ${esc(r.orderId)}: <strong>${esc(r.reason)}</strong>.`), { label: "Review the claim", href: r.adminUrl }),
     text: `${r.name} reported "${r.reason}" on order ${r.orderId}. Review: ${r.adminUrl}`,
+  };
+}
+
+export function passwordResetEmail(to: string, url: string): Mail {
+  return {
+    to,
+    subject: "Reset your Aaliqadr password",
+    html: layout(
+      "Reset your password",
+      p("Someone asked to reset the password for this account. If it was you, use the button below. The link works once and expires in 30 minutes.") +
+        p("If you didn't ask for this, ignore this email; your password stays the same."),
+      { label: "Choose a new password", href: url },
+    ),
+    text: `Reset your Aaliqadr password (link works once, expires in 30 minutes): ${url}\n\nIf you didn't ask for this, ignore this email.`,
+  };
+}
+
+// ── Alerts and requests (plan.md §10.3, §11.3) ───────────────────────────────
+
+export function backInStockEmail(to: string, x: { name: string; variant: string; url: string }): Mail {
+  return {
+    to,
+    subject: `${x.name} (${x.variant}) is back in stock`,
+    html: layout("It's back", p(`${esc(x.name)}, ${esc(x.variant)}, is available again. Stock is limited, so it may not last.`) + p("You asked us to tell you; we won't email you about it again."), { label: "Shop it now", href: x.url }),
+    text: `${x.name} (${x.variant}) is back in stock: ${x.url}`,
+  };
+}
+
+export function priceDropEmail(to: string, x: { name: string; fromP: number; toP: number; url: string }): Mail {
+  return {
+    to,
+    subject: `Price drop: ${x.name} is now ${formatPrice(x.toP)}`,
+    html: layout("A price drop on your wishlist", p(`${esc(x.name)} is now <strong>${formatPrice(x.toP)}</strong> (was ${formatPrice(x.fromP)} when you saved it).`) + p("Turn these alerts off any time from your wishlist."), { label: "See it", href: x.url }),
+    text: `${x.name} is now ${formatPrice(x.toP)} (was ${formatPrice(x.fromP)}): ${x.url}`,
+  };
+}
+
+export function reviewRequestEmail(to: string, x: { name: string; products: string[]; url: string }): Mail {
+  const list = x.products.slice(0, 3).join(", ");
+  return {
+    to,
+    subject: `How is ${x.products[0] ?? "your fragrance"} wearing?`,
+    html: layout("How is it wearing?", p(`Hi ${esc(x.name.split(" ")[0] ?? x.name)},`) + p(`You've had ${esc(list)} for a week now. A short review helps other people find their scent, and we read every one.`), { label: "Write a review", href: x.url }),
+    text: `How is ${list} wearing? Write a review: ${x.url}`,
+  };
+}
+
+export function questionAnsweredEmail(to: string, x: { product: string; question: string; answer: string; url: string }): Mail {
+  return {
+    to,
+    subject: `Your question about ${x.product} has an answer`,
+    html: layout("We answered your question", p(`<em>${esc(x.question)}</em>`) + p(esc(x.answer)), { label: "See it on the product page", href: x.url }),
+    text: `Q: ${x.question}\nA: ${x.answer}\n${x.url}`,
   };
 }
