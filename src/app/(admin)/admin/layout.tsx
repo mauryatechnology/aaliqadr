@@ -52,21 +52,6 @@ async function Gate({ children }: { children: React.ReactNode }) {
       </Centered>
     );
   }
-  if (hasRole(user, "admin") && !user.twoFactorEnabled) {
-    return (
-      <Centered
-        title="Two-factor authentication required"
-        body={`${email} has an administrator role. You must enable 2FA on your account before accessing the admin dashboard.`}
-      >
-        <Link
-          href="/account/security"
-          className="inline-flex h-10 items-center rounded-lg bg-neutral-900 px-5 text-sm font-medium text-white hover:bg-neutral-800"
-        >
-          Set up 2FA in Account Security
-        </Link>
-      </Centered>
-    );
-  }
   const role = user.role === "customer" ? "staff" : user.role;
   const badges = await getAdminBadges();
   return (

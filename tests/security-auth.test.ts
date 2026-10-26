@@ -10,10 +10,8 @@ describe("Security & Role Checks", () => {
     return RANK[userRole] >= RANK[min];
   }
 
-  function requiresTwoFactor(role: Role, twoFactorEnabled?: boolean): boolean {
-    // Admin and owner must have 2FA enabled to access the back office
-    if (hasRole(role, "admin") && !twoFactorEnabled) return true;
-    return false;
+  function canAccessAdmin(role: Role): boolean {
+    return hasRole(role, "staff");
   }
 
   it("enforces proper role hierarchy", () => {
@@ -30,18 +28,11 @@ describe("Security & Role Checks", () => {
     expect(hasRole("owner", "owner")).toBe(true);
   });
 
-  it("requires 2FA enrollment strictly for admin and owner roles", () => {
-    // Customers and staff without 2FA don't trigger the mandatory admin gate
-    expect(requiresTwoFactor("customer", false)).toBe(false);
-    expect(requiresTwoFactor("staff", false)).toBe(false);
-
-    // Admin without 2FA is blocked
-    expect(requiresTwoFactor("admin", false)).toBe(true);
-    expect(requiresTwoFactor("admin", true)).toBe(false);
-
-    // Owner without 2FA is blocked
-    expect(requiresTwoFactor("owner", false)).toBe(true);
-    expect(requiresTwoFactor("owner", true)).toBe(false);
+  it("permits direct admin login for staff, admin, and owner without mandatory 2FA", () => {
+    expect(canAccessAdmin("customer")).toBe(false);
+    expect(canAccessAdmin("staff")).toBe(true);
+    expect(canAccessAdmin("admin")).toBe(true);
+    expect(canAccessAdmin("owner")).toBe(true);
   });
 
   it("includes all canonical merchandise badges for catalog bulk editing", () => {

@@ -69,7 +69,7 @@ The remaining tasks below cannot be solved in code alone; they require owner acc
 
 Confirm the following 14 operational choices before turning the store public:
 
-1. **Staff 2FA:** Currently enforced for `admin` and `owner`. Confirm if regular `staff` should also be required to use 2FA or keep it optional.
+1. **Staff & Admin 2FA:** Set to optional; direct login enabled for all admin, owner, and staff roles without mandatory 2FA.
 2. **Order Edits Window:** Addresses, phone numbers, and gift messages can only be edited before order status reaches `dispatched`.
 3. **Customer Account Deletion:** Handled via GDPR/DPDP compliant request flow with a 30-day grace period.
 4. **Admin UI Density:** Default is set to Compact (36px rows); each admin can toggle to Comfortable via their profile.
