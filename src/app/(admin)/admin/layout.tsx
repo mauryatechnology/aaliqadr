@@ -9,7 +9,7 @@ import { AdminNav } from "@/components/admin/AdminNav";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { getAdminBadges } from "@/server/admin/ops";
 import { Toaster } from "@/components/admin/kit/Toaster";
-import { DensityToggle } from "@/components/admin/kit/Bits";
+import { DensityInitializer, DensityToggle } from "@/components/admin/kit/Bits";
 import { CommandPalette, PaletteHint } from "@/components/admin/kit/CommandPalette";
 
 export const metadata: Metadata = {
@@ -21,8 +21,8 @@ export const metadata: Metadata = {
 export default function AdminLayout({ children }: LayoutProps<"/admin">) {
   return (
     <div className="min-h-dvh bg-neutral-100 font-sans text-neutral-900 [color-scheme:light]">
-      {/* Row density is chosen per browser; set it before paint so tables don't jump. */}
-      <script dangerouslySetInnerHTML={{ __html: `try{var d=localStorage.getItem("aq.admin-density");if(d)document.documentElement.dataset.density=d}catch(e){}` }} />
+      {/* Row density is chosen per browser; set it on client mount without raw script tags. */}
+      <DensityInitializer />
       <Toaster />
       <Suspense fallback={<Skeleton />}>
         <Gate>{children}</Gate>

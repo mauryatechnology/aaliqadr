@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 /** Small client pieces (plan.md §2.5). */
@@ -69,3 +69,17 @@ export function DensityToggle() {
     </button>
   );
 }
+
+/** Sets document density from localStorage without raw script tags in React tree. */
+export function DensityInitializer() {
+  useEffect(() => {
+    try {
+      const d = localStorage.getItem("aq.admin-density");
+      if (d) document.documentElement.dataset.density = d;
+    } catch {
+      // ignore
+    }
+  }, []);
+  return null;
+}
+
