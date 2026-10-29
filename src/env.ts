@@ -93,6 +93,28 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => (v && v.trim().length > 0 ? v.trim() : "dummy-sentry-dsn")),
+
+  // Amazon Shipping (SP-API Shipping v2)
+  SPAPI_MODE: z.enum(["sandbox", "production"]).optional().default("sandbox"),
+  SPAPI_BASE_URL: z.string().optional().default("https://sandbox.sellingpartnerapi-na.amazon.com"),
+  LWA_TOKEN_URL: z.string().optional().default("https://api.amazon.com/auth/o2/token"),
+  LWA_CLIENT_ID: z.string().optional(),
+  LWA_CLIENT_SECRET: z.string().optional(),
+  LWA_REFRESH_TOKEN: z.string().optional(),
+  AMAZON_SHIPPING_BUSINESS_ID: z.string().optional().default("AmazonShipping_US"),
+  WAREHOUSE_NAME: z.string().optional(),
+  WAREHOUSE_ADDRESS_LINE1: z.string().optional(),
+  WAREHOUSE_CITY: z.string().optional(),
+  WAREHOUSE_STATE: z.string().optional(),
+  WAREHOUSE_POSTAL_CODE: z.string().optional(),
+  WAREHOUSE_COUNTRY: z.string().optional(),
+  WAREHOUSE_EMAIL: z.string().optional(),
+  WAREHOUSE_PHONE: z.string().optional(),
+  TRACKING_CRON: z.string().optional().default("0 */2 * * *"),
+  AMAZON_CURRENCY: z.string().optional().default("USD"),
+  AMAZON_WEIGHT_UNIT: z.string().optional().default("POUND"),
+  AMAZON_DIMENSION_UNIT: z.string().optional().default("INCH"),
+  AMAZON_SANDBOX_USE_SAMPLE_ADDRESS: z.string().optional().default("true"),
 });
 
 export type Env = z.infer<typeof schema>;
@@ -119,6 +141,27 @@ const OPTIONAL_IN_PRODUCTION: EnvKey[] = [
   "SHIPROCKET_PASSWORD",
   "SHIPROCKET_WEBHOOK_TOKEN",
   "SHIPROCKET_PICKUP_LOCATION",
+  // Amazon Shipping
+  "SPAPI_MODE",
+  "SPAPI_BASE_URL",
+  "LWA_TOKEN_URL",
+  "LWA_CLIENT_ID",
+  "LWA_CLIENT_SECRET",
+  "LWA_REFRESH_TOKEN",
+  "AMAZON_SHIPPING_BUSINESS_ID",
+  "WAREHOUSE_NAME",
+  "WAREHOUSE_ADDRESS_LINE1",
+  "WAREHOUSE_CITY",
+  "WAREHOUSE_STATE",
+  "WAREHOUSE_POSTAL_CODE",
+  "WAREHOUSE_COUNTRY",
+  "WAREHOUSE_EMAIL",
+  "WAREHOUSE_PHONE",
+  "TRACKING_CRON",
+  "AMAZON_CURRENCY",
+  "AMAZON_WEIGHT_UNIT",
+  "AMAZON_DIMENSION_UNIT",
+  "AMAZON_SANDBOX_USE_SAMPLE_ADDRESS",
   // Phone OTP stays off until DLT templates are approved; email OTP and Google work.
   "MSG91_AUTH_KEY",
   "MSG91_OTP_TEMPLATE_ID",

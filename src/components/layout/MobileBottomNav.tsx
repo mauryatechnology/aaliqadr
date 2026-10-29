@@ -31,8 +31,9 @@ export function MobileBottomNav() {
           </Link>
         ),
       )}
-      <div className="flex min-w-14 flex-col items-center text-[10px] text-fg/75">
-        <CartButton />
+      <div className="flex min-w-14 flex-col items-center gap-0.5 py-2 text-[10px] text-fg/75 hover:text-gold">
+        <CartButton id="mobile-nav-cart-button" variant="bottomNav" />
+        <span>Bag</span>
       </div>
     </nav>
   );

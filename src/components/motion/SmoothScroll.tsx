@@ -20,7 +20,7 @@ export function SmoothScroll() {
     let raf = 0;
     let destroy: (() => void) | undefined;
     void import("lenis").then(({ default: Lenis }) => {
-      const lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 0.9 });
+      const lenis = new Lenis({ lerp: 0.08, wheelMultiplier: 0.95 });
       const loop = (t: number) => {
         lenis.raf(t);
         raf = requestAnimationFrame(loop);

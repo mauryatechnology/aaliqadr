@@ -58,15 +58,26 @@ export function CartDrawer() {
 
   const thresholdP = site.freeShippingAboveP; // 149900 paise (₹1,499)
   const subtotalP = view?.subtotalP ?? 0;
-  const remainingP = view?.freeShippingRemainingP ?? (subtotalP > 0 ? Math.max(0, thresholdP - subtotalP) : thresholdP);
+  const remainingP =
+    subtotalP > 0
+      ? view?.freeShippingRemainingP !== undefined && view.freeShippingRemainingP > 0
+        ? view.freeShippingRemainingP
+        : Math.max(0, thresholdP - subtotalP)
+      : thresholdP;
   const freeShippingUnlocked = subtotalP > 0 && remainingP <= 0;
-  const progressPercent = Math.min(100, Math.round((subtotalP / thresholdP) * 100));
+  const progressPercent = subtotalP > 0 ? Math.min(100, Math.round((subtotalP / thresholdP) * 100)) : 0;
+  const hasRealItems = (view?.lines?.length ?? 0) > 0 || (lines.length > 0 && pending);
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label="Shopping bag">
+    <div
+      className="fixed inset-0 z-50 flex justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Your Fragrance Bag"
+    >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+        className="fixed inset-0 bg-obsidian/85 backdrop-blur-md transition-opacity duration-500 animate-in fade-in"
         onClick={() => setDrawerOpen(false)}
         aria-hidden="true"
       />
@@ -74,52 +85,62 @@ export function CartDrawer() {
       {/* Slide-over Drawer Panel */}
       <div
         ref={drawerRef}
-        className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#0c0a10] text-fg shadow-2xl transition-transform duration-300 ease-lux sm:max-w-lg animate-in slide-in-from-right"
+        className="relative z-10 flex h-full w-full max-w-md flex-col border-l border-gold/25 bg-[#0E0C14]/98 text-ivory backdrop-blur-xl shadow-[0_0_80px_rgba(0,0,0,0.95)] transition-transform duration-500 ease-lux sm:max-w-md animate-in slide-in-from-right"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4 sm:px-6">
+        <div className="flex items-center justify-between border-b border-gold/20 bg-bg/95 px-5 py-4.5 sm:px-6 shadow-xs">
           <div className="flex items-center gap-2.5">
-            <ShoppingBag className="size-5 text-gold" strokeWidth={1.7} />
-            <h2 className="font-display text-xl font-medium tracking-wide sm:text-2xl">Your Bag</h2>
+            <div className="flex size-9 items-center justify-center rounded-full border border-gold/35 bg-gold/10 text-gold shadow-xs">
+              <ShoppingBag className="size-4.5" strokeWidth={1.75} />
+            </div>
+            <h2 className="font-display text-xl sm:text-2xl font-light text-ivory tracking-wide">
+              Your Bag
+            </h2>
             {view && view.itemCount > 0 && (
-              <span className="rounded-full bg-gold/20 px-2 py-0.5 text-xs font-semibold text-gold-light">
-                {view.itemCount}
+              <span className="rounded-full border border-gold/40 bg-gold/15 px-2.5 py-0.5 font-caps text-[11px] text-gold font-semibold uppercase tracking-[0.16em]">
+                {view.itemCount} {view.itemCount === 1 ? "Item" : "Items"}
               </span>
             )}
           </div>
           <button
             type="button"
             onClick={() => setDrawerOpen(false)}
-            className="rounded-full p-2 text-ivory/70 transition-colors hover:bg-white/10 hover:text-white"
+            className="flex size-8.5 items-center justify-center rounded-full border border-gold/30 bg-surface/60 text-ivory/80 hover:border-gold hover:bg-gold/15 hover:text-gold transition-all cursor-pointer active:scale-95"
             aria-label="Close bag"
           >
-            <X className="size-5" />
+            <X className="size-4" strokeWidth={1.75} />
           </button>
         </div>
 
         {/* Free Shipping Progress Meter */}
-        <div className="border-b border-white/10 bg-white/[0.02] px-5 py-3.5 sm:px-6">
-          <div className="flex items-center justify-between gap-2 text-xs">
+        <div className="border-b border-gold/15 bg-surface/60 px-5 py-3.5 sm:px-6 backdrop-blur-md">
+          <div className="flex items-center justify-between gap-2 text-xs sm:text-[13px]">
             {freeShippingUnlocked ? (
-              <span className="flex items-center gap-1.5 font-medium text-gold-light">
-                <Truck className="size-4 text-gold" />
-                <span>🎉 <strong>Free Express Shipping</strong> Unlocked!</span>
+              <span className="flex items-center gap-2 font-semibold text-gold font-caps text-xs uppercase tracking-[0.18em]">
+                <Truck className="size-4 text-gold shrink-0" strokeWidth={1.75} />
+                <span>✦ Complimentary Express Shipping Unlocked!</span>
+              </span>
+            ) : subtotalP === 0 ? (
+              <span className="text-ivory/90 text-xs sm:text-[13px] font-normal">
+                Complimentary Express Shipping on orders above <strong className="text-gold font-semibold">₹1,499</strong>
               </span>
             ) : (
-              <span className="text-ivory/80">
-                Add <strong>{formatPrice(remainingP)}</strong> more for <strong>Free Express Shipping</strong>
+              <span className="text-ivory/90 text-xs sm:text-[13px] font-normal">
+                Add <strong className="text-gold font-semibold">{formatPrice(remainingP)}</strong> more for{" "}
+                <strong className="text-gold-soft font-semibold">Free Express Shipping</strong>
               </span>
             )}
-            <span className="text-[11px] font-semibold text-gold/90">{progressPercent}%</span>
+            <span className="font-caps text-xs font-semibold text-gold">{progressPercent}%</span>
           </div>
+
           {/* Progress track */}
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface/90 border border-gold/25">
             <div
               className={cn(
                 "h-full rounded-full transition-all duration-500 ease-lux",
                 freeShippingUnlocked
-                  ? "bg-gradient-to-r from-gold via-gold-light to-gold shadow-[0_0_12px_rgba(196,160,68,0.7)]"
-                  : "bg-gradient-to-r from-gold/60 to-gold"
+                  ? "bg-gradient-to-r from-gold via-[#E8CF8A] to-gold shadow-[0_0_12px_rgba(201,169,110,0.85)]"
+                  : "bg-gradient-to-r from-[#B38738] to-[#E2C37E]"
               )}
               style={{ width: `${progressPercent}%` }}
             />
@@ -129,46 +150,71 @@ export function CartDrawer() {
         {/* Body / Items List */}
         <div
           aria-busy={pending}
-          className={cn("flex-1 overflow-y-auto px-5 py-4 [scrollbar-width:thin] sm:px-6 transition-opacity duration-200", pending && "opacity-70")}
+          className={cn(
+            "flex-1 overflow-y-auto px-5 py-6 [scrollbar-width:thin] sm:px-6 transition-opacity duration-200",
+            pending && "opacity-70"
+          )}
         >
-          {lines.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4 py-12 text-center">
-              <div className="grid size-16 place-items-center rounded-full bg-white/[0.04] text-gold/70">
-                <ShoppingBag className="size-8" strokeWidth={1.3} />
+          {!hasRealItems ? (
+            /* Luxury Empty State */
+            <div className="flex h-full flex-col items-center justify-center py-6 px-4 text-center">
+              {/* Luminous Gold Halo Medallion */}
+              <div className="relative mb-6 flex size-24 items-center justify-center rounded-2xl border border-gold/40 bg-gradient-to-b from-[#251D14] via-[#1A140E] to-[#100D09] shadow-[inset_0_1px_2px_rgba(255,230,160,0.3),0_8px_32px_rgba(0,0,0,0.7)]">
+                <ShoppingBag className="size-10 text-gold drop-shadow-[0_2px_8px_rgba(201,169,110,0.5)]" strokeWidth={1.5} />
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -z-10 rounded-2xl bg-gold/20 blur-xl"
+                />
               </div>
-              <h3 className="font-display text-2xl font-light text-ivory">Your bag is empty</h3>
-              <p className="max-w-xs text-xs text-ivory/60">
-                Twelve luxury Extraits composed for each rashi. Begin by finding the fragrance written in your stars.
+
+              <p className="eyebrow flex items-center justify-center gap-1.5 text-gold font-semibold tracking-[0.28em] text-xs uppercase mb-2">
+                <span className="text-[9px]">✦</span>
+                <span>MAISON BAG EMPTY</span>
+                <span className="text-[9px]">✦</span>
               </p>
-              <div className="mt-3 flex flex-col gap-2.5 w-full max-w-xs">
+              <h3 className="font-display text-2xl sm:text-3xl font-light text-ivory mb-2.5">
+                Your bag awaits its signature
+              </h3>
+              <p className="max-w-xs text-sm text-ivory/85 font-normal leading-relaxed mb-7">
+                Twelve bespoke Extrait de Parfum creations, hand-poured with 28% noble oil concentration. Discover the fragrance written in your stars.
+              </p>
+
+              <div className="flex flex-col gap-3 w-full max-w-xs">
                 <Link
                   href="/find-my-sign"
                   onClick={() => setDrawerOpen(false)}
-                  className="rounded-full bg-gold py-2.5 text-center font-caps text-[0.68rem] uppercase tracking-[0.2em] text-obsidian font-semibold transition hover:bg-gold-light"
+                  className="rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#C9A96E] py-3.5 px-5 text-center font-caps text-xs sm:text-[12.5px] uppercase tracking-[0.2em] text-[#0B0A0F] font-bold shadow-[0_4px_20px_rgba(201,169,110,0.35)] hover:shadow-[0_6px_28px_rgba(201,169,110,0.5)] hover:scale-[1.02] active:scale-98 transition-all"
                 >
-                  Find My Sign
+                  ✦ Find My Astrological Sign
                 </Link>
                 <Link
                   href="/shop"
                   onClick={() => setDrawerOpen(false)}
-                  className="rounded-full border border-white/20 py-2.5 text-center font-caps text-[0.68rem] uppercase tracking-[0.2em] text-ivory transition hover:border-gold hover:text-gold"
+                  className="rounded-xl border border-gold/45 bg-surface/90 py-3.5 px-5 text-center font-caps text-xs sm:text-[12.5px] uppercase tracking-[0.2em] text-ivory font-semibold hover:border-gold hover:bg-gold/15 hover:text-gold active:scale-98 transition-all shadow-xs"
                 >
-                  Explore The Collection
+                  Explore All Fragrances
+                </Link>
+                <Link
+                  href="/perfume/zodiac-discovery-coffret"
+                  onClick={() => setDrawerOpen(false)}
+                  className="rounded-xl border border-gold/30 bg-gold/[0.08] py-3 px-5 text-center font-caps text-[11px] uppercase tracking-[0.18em] text-gold font-semibold hover:border-gold hover:bg-gold/20 hover:text-ivory active:scale-98 transition-all"
+                >
+                  Sample Discovery Coffret (12 x 2ml)
                 </Link>
               </div>
             </div>
           ) : (
-            <ul className="divide-y divide-white/10">
+            /* Itemized Cart List */
+            <ul className="divide-y divide-gold/10">
               {(view?.lines ?? []).map((l) => {
                 const imgUrl = l.image || (l.zodiacSign ? `/bottles/${l.zodiacSign}.svg` : "/bottles/brand.svg");
                 return (
-                  <li key={l.sku} data-zodiac={l.zodiacSign} className="flex gap-4 py-4">
+                  <li key={l.sku} data-zodiac={l.zodiacSign} className="flex gap-4 py-4.5 rounded-xl border border-gold/15 bg-surface/40 p-3.5 mb-3 backdrop-blur-sm">
                     {/* Item Image */}
                     <Link
                       href={routes.product(l.slug)}
                       onClick={() => setDrawerOpen(false)}
-                      className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-xl border border-white/10 p-1.5 transition-transform hover:scale-105"
-                      style={{ background: "radial-gradient(circle at 50% 35%, var(--z-g2, #2a2318), var(--z-bg, #0b0a0f) 85%)" }}
+                      className="relative grid size-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-gold/30 bg-surface/90 p-2 shadow-xs transition-transform hover:scale-105"
                     >
                       <Image
                         src={imgUrl}
@@ -181,54 +227,56 @@ export function CartDrawer() {
                     </Link>
 
                     {/* Details */}
-                    <div className="flex flex-1 flex-col justify-between">
+                    <div className="flex flex-1 flex-col justify-between min-w-0">
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <Link
                             href={routes.product(l.slug)}
                             onClick={() => setDrawerOpen(false)}
-                            className="font-display text-base font-medium text-ivory hover:text-gold line-clamp-1"
+                            className="font-display text-base font-medium text-ivory hover:text-gold line-clamp-1 transition-colors"
                           >
                             {l.name}
                           </Link>
                           <button
                             type="button"
                             onClick={() => cart.setQty(l.sku, 0)}
-                            className="text-ivory/40 hover:text-red-400 transition-colors p-0.5"
+                            className="text-ivory/60 hover:text-red-400 transition-colors p-1.5 rounded-sm hover:bg-white/5 active:scale-95 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
                             aria-label={`Remove ${l.name}`}
                           >
                             <Trash2 className="size-3.5" />
                           </button>
                         </div>
-                        <p className="text-xs text-ivory/60 mt-0.5">{l.variantLabel}</p>
+                        <p className="font-caps text-[11px] uppercase tracking-[0.16em] text-gold-soft font-medium mt-0.5">
+                          {l.variantLabel}
+                        </p>
                       </div>
 
                       {/* Quantity Stepper and Price */}
                       <div className="mt-3 flex items-center justify-between">
-                        <div className="flex items-center rounded-full border border-white/20 bg-white/[0.03]">
+                        <div className="flex items-center border border-gold/40 bg-surface/90 rounded-md shadow-xs">
                           <button
                             type="button"
-                            className="grid size-7 place-items-center text-ivory/70 hover:text-white"
+                            className="grid size-8.5 min-h-[34px] min-w-[34px] place-items-center text-ivory/80 hover:text-gold hover:bg-white/5 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold"
                             aria-label="Decrease quantity"
                             onClick={() => cart.setQty(l.sku, l.qty - 1)}
                           >
-                            <Minus className="size-3" />
+                            <Minus className="size-3.5" />
                           </button>
-                          <span className="w-6 text-center text-xs font-semibold text-ivory">
+                          <span className="w-7 text-center text-xs font-semibold text-ivory select-none">
                             {l.qty}
                           </span>
                           <button
                             type="button"
-                            className="grid size-7 place-items-center text-ivory/70 hover:text-white disabled:opacity-30"
+                            className="grid size-8.5 min-h-[34px] min-w-[34px] place-items-center text-ivory/80 hover:text-gold hover:bg-white/5 active:scale-95 disabled:opacity-30 transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gold"
                             aria-label="Increase quantity"
                             disabled={l.qty >= l.maxQty}
                             onClick={() => cart.setQty(l.sku, l.qty + 1)}
                           >
-                            <Plus className="size-3" />
+                            <Plus className="size-3.5" />
                           </button>
                         </div>
 
-                        <span className="font-sans text-sm font-semibold text-ivory">
+                        <span className="font-display text-base font-normal text-gold">
                           {formatPrice(l.lineTotalP)}
                         </span>
                       </div>
@@ -240,28 +288,32 @@ export function CartDrawer() {
           )}
         </div>
 
-        {/* Footer / Checkout */}
-        {lines.length > 0 && (
-          <div className="border-t border-white/10 bg-[#0c0a10]/95 px-5 py-4 sm:px-6">
-            <div className="flex flex-col gap-1.5 pb-3">
-              <div className="flex items-center justify-between text-xs text-ivory/70">
-                <span>Subtotal</span>
-                <span className="font-medium text-ivory">{view ? formatPrice(view.subtotalP) : "…"}</span>
+        {/* Footer / Checkout (Visible when items exist) */}
+        {hasRealItems && (
+          <div className="border-t border-gold/20 bg-bg/95 px-5 py-5 sm:px-6 backdrop-blur-md shadow-lg">
+            <div className="flex flex-col gap-2 pb-3.5">
+              <div className="flex items-center justify-between text-xs sm:text-[13px] text-ivory/90">
+                <span className="font-caps uppercase tracking-[0.18em] text-ivory/80 font-medium">Subtotal</span>
+                <span className="font-display text-base font-normal text-ivory">
+                  {view ? formatPrice(view.subtotalP) : "…"}
+                </span>
               </div>
-              <div className="flex items-center justify-between text-xs text-ivory/70">
-                <span>Shipping</span>
+              <div className="flex items-center justify-between text-xs sm:text-[13px] text-ivory/90">
+                <span className="font-caps uppercase tracking-[0.18em] text-ivory/80 font-medium">Express Shipping</span>
                 <span>
                   {freeShippingUnlocked ? (
-                    <strong className="text-gold-light">FREE</strong>
+                    <strong className="font-caps text-xs uppercase tracking-[0.18em] text-gold font-semibold">
+                      Complimentary
+                    </strong>
                   ) : (
-                    "Calculated at checkout"
+                    <span className="text-ivory/70 text-xs">Calculated at checkout</span>
                   )}
                 </span>
               </div>
               {view && view.savingsP > 0 && (
-                <div className="flex items-center justify-between text-xs text-gold-light">
-                  <span>Special Savings</span>
-                  <span>−{formatPrice(view.savingsP)}</span>
+                <div className="flex items-center justify-between text-xs text-gold">
+                  <span className="font-caps uppercase tracking-[0.18em] font-medium">Special Savings</span>
+                  <span className="font-display text-sm font-semibold">−{formatPrice(view.savingsP)}</span>
                 </div>
               )}
             </div>
@@ -269,22 +321,22 @@ export function CartDrawer() {
             <Link
               href="/checkout"
               onClick={() => setDrawerOpen(false)}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-gold py-3.5 font-caps text-xs uppercase tracking-[0.2em] font-semibold text-obsidian shadow-[0_4px_24px_rgba(196,160,68,0.35)] transition hover:bg-gold-light"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#D4AF37] via-[#F3E5AB] to-[#C9A96E] py-4 font-caps text-xs sm:text-[13px] uppercase tracking-[0.22em] font-bold text-[#0B0A0F] shadow-[0_4px_24px_rgba(201,169,110,0.35)] hover:shadow-[0_6px_30px_rgba(201,169,110,0.5)] hover:scale-[1.01] active:scale-98 transition-all"
             >
               <span>Proceed to Checkout</span>
               <ArrowRight className="size-4" />
             </Link>
 
-            <div className="mt-2.5 flex items-center justify-between text-[11px] text-ivory/50">
+            <div className="mt-3 flex items-center justify-between text-[11px] text-ivory/60">
               <Link
                 href="/cart"
                 onClick={() => setDrawerOpen(false)}
-                className="underline decoration-ivory/30 underline-offset-4 hover:text-gold"
+                className="underline decoration-ivory/30 underline-offset-4 hover:text-gold transition-colors font-caps text-[10px] uppercase tracking-[0.16em]"
               >
-                View full bag details
+                View Full Bag Details
               </Link>
-              <span className="flex items-center gap-1">
-                <Sparkles className="size-3 text-gold/70" /> Authentic Extrait de Parfum
+              <span className="flex items-center gap-1 font-caps text-[10px] uppercase tracking-[0.16em] text-gold/80">
+                <Sparkles className="size-3 text-gold" /> 28% Pure Extrait
               </span>
             </div>
           </div>

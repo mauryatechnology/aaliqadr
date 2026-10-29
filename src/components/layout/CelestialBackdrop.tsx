@@ -1,5 +1,3 @@
-import { SIGNS } from "@/config/zodiac";
-
 /**
  * Site-wide night sky behind every page (docs/09 §3). Fixed layers that drift at different
  * speeds as the page scrolls (CSS scroll timeline on the root, `ParallaxRuntime` fallback),
@@ -21,16 +19,20 @@ function Stars({ id, tile, count, salt, maxR, twinkles }: { id: string; tile: nu
     <svg className="h-full w-full" aria-hidden>
       <defs>
         <pattern id={id} width={tile} height={tile} patternUnits="userSpaceOnUse">
-          {Array.from({ length: count }, (_, i) => (
-            <circle
-              key={i}
-              cx={(rand(i, salt + 2) * tile).toFixed(1)}
-              cy={(rand(i, salt + 3) * tile).toFixed(1)}
-              r={(0.4 + rand(i, salt + 1) * maxR).toFixed(2)}
-              fill={i % 7 === 0 ? "var(--z-accent)" : i % 5 === 0 ? "var(--z-glow)" : "#F5F0E6"}
-              opacity={(0.18 + rand(i, salt + 4) * 0.42).toFixed(2)}
-            />
-          ))}
+          {Array.from({ length: count }, (_, i) => {
+            const isGold = i % 5 === 0;
+            const isBright = i % 3 === 0;
+            return (
+              <circle
+                key={i}
+                cx={(rand(i, salt + 2) * tile).toFixed(1)}
+                cy={(rand(i, salt + 3) * tile).toFixed(1)}
+                r={(0.5 + rand(i, salt + 1) * maxR).toFixed(2)}
+                fill={isGold ? "var(--gold, #C9A96E)" : isBright ? "#FFFFFF" : "#F4EFE6"}
+                opacity={(0.28 + rand(i, salt + 4) * 0.52).toFixed(2)}
+              />
+            );
+          })}
         </pattern>
       </defs>
       <rect width="100%" height="100%" fill={`url(#${id})`} />
@@ -39,8 +41,8 @@ function Stars({ id, tile, count, salt, maxR, twinkles }: { id: string; tile: nu
           key={i}
           cx={`${(rand(i, salt + 7) * 100).toFixed(1)}%`}
           cy={`${(rand(i, salt + 8) * 100).toFixed(1)}%`}
-          r={(0.8 + rand(i, salt + 9) * maxR).toFixed(2)}
-          fill={i % 3 === 0 ? "var(--z-glow)" : "#F5F0E6"}
+          r={(0.9 + rand(i, salt + 9) * maxR).toFixed(2)}
+          fill={i % 2 === 0 ? "var(--gold, #C9A96E)" : "#FFFFFF"}
           className="twinkle"
           style={{ animationDelay: `${(-rand(i, salt + 5) * 6).toFixed(2)}s` }}
         />
@@ -49,71 +51,29 @@ function Stars({ id, tile, count, salt, maxR, twinkles }: { id: string; tile: nu
   );
 }
 
-function ZodiacRing() {
-  return (
-    <svg viewBox="-500 -500 1000 1000" className="h-full w-full" aria-hidden>
-      <circle r="470" fill="none" stroke="var(--z-accent)" strokeWidth="1" />
-      <circle r="400" fill="none" stroke="var(--z-accent)" strokeWidth=".6" />
-      <circle r="250" fill="none" stroke="var(--z-accent)" strokeWidth=".4" strokeDasharray="2 8" />
-      {Array.from({ length: 72 }, (_, i) => {
-        const a = (i / 72) * Math.PI * 2;
-        const inner = i % 6 === 0 ? 400 : 445;
-        return (
-          <line
-            key={i}
-            x1={(Math.cos(a) * inner).toFixed(1)}
-            y1={(Math.sin(a) * inner).toFixed(1)}
-            x2={(Math.cos(a) * 470).toFixed(1)}
-            y2={(Math.sin(a) * 470).toFixed(1)}
-            stroke="var(--z-accent)"
-            strokeWidth={i % 6 === 0 ? 1 : 0.5}
-          />
-        );
-      })}
-      {SIGNS.map((s, i) => {
-        const a = (i / 12) * Math.PI * 2 - Math.PI / 2 + Math.PI / 12;
-        return (
-          <text key={s.slug} x={(Math.cos(a) * 435).toFixed(1)} y={(Math.sin(a) * 435 + 9).toFixed(1)} textAnchor="middle" fontSize="26" fill="var(--z-accent)" style={{ fontFamily: "serif" }}>
-            {s.glyph}
-            {"︎"}
-          </text>
-        );
-      })}
-    </svg>
-  );
-}
-
 export function CelestialBackdrop() {
   return (
-    <div aria-hidden className="celestial pointer-events-none fixed inset-0 -z-30 overflow-hidden">
-      {/* Sign-tinted luminous nebula layers */}
+    <div aria-hidden className="celestial pointer-events-none fixed inset-0 -z-30 overflow-clip">
+      {/* Deep obsidian ambient backdrop */}
       <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(110% 75% at 75% -5%, color-mix(in oklab, var(--z-glow) 26%, transparent), transparent 65%), radial-gradient(95% 65% at 5% 105%, color-mix(in oklab, var(--z-primary) 22%, transparent), transparent 65%), radial-gradient(85% 60% at 50% 45%, rgba(196,160,68,0.08), transparent 75%)",
-        }}
+        className="absolute inset-0 bg-[#060508]"
       />
       {/* Subtle cosmic starlight glow in upper center */}
       <div
-        className="absolute left-1/2 top-0 -translate-x-1/2 h-[70vh] w-[90vw] blur-[140px] opacity-35"
+        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 h-[50vh] w-[80vw] blur-[160px] opacity-25"
         style={{
-          background: "radial-gradient(ellipse at top, rgba(212,175,55,0.18) 0%, rgba(45,70,120,0.12) 50%, transparent 80%)",
+          background: "radial-gradient(ellipse at top, rgba(201,169,110,0.12) 0%, transparent 70%)",
         }}
       />
-      {/* Far stars: slowest */}
-      <div data-parallax-root="0.06" className="absolute inset-x-0 top-0 h-[170vh] opacity-90" style={{ "--pr-speed": 0.06 } as React.CSSProperties}>
-        <Stars id="stars-far" tile={420} count={32} salt={11} maxR={0.8} twinkles={6} />
+      {/* Far stars: slowest, extended to cover down to footer */}
+      <div data-parallax-root="0.05" className="absolute inset-x-0 top-0 h-[450vh] opacity-90" style={{ "--pr-speed": 0.05 } as React.CSSProperties}>
+        <Stars id="stars-far" tile={380} count={38} salt={11} maxR={0.9} twinkles={14} />
       </div>
-      {/* Near stars: faster, brighter */}
-      <div data-parallax-root="0.16" className="absolute inset-x-0 top-0 h-[190vh]" style={{ "--pr-speed": 0.16 } as React.CSSProperties}>
-        <Stars id="stars-near" tile={640} count={16} salt={29} maxR={1.2} twinkles={10} />
+      {/* Near stars: faster, brighter, extended to cover down to footer */}
+      <div data-parallax-root="0.14" className="absolute inset-x-0 top-0 h-[480vh]" style={{ "--pr-speed": 0.14 } as React.CSSProperties}>
+        <Stars id="stars-near" tile={540} count={22} salt={29} maxR={1.4} twinkles={18} />
       </div>
-      {/* Celestial clockwork: turns gracefully as you scroll, delicately visible */}
-      <div className="zodiac-ring absolute -right-[38vmin] top-[8vh] aspect-square w-[120vmin] opacity-[0.14] transition-opacity duration-700">
-        <ZodiacRing />
-      </div>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(130% 100% at 50% 40%, transparent 65%, rgb(0 0 0 / .35) 100%)" }} />
+      <div className="absolute inset-0" style={{ background: "radial-gradient(150% 120% at 50% 50%, transparent 85%, rgba(0, 0, 0, 0.12) 100%)" }} />
     </div>
   );
 }

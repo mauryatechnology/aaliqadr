@@ -27,7 +27,7 @@ export function WishlistButton({ slug, name, className, size = "sm" }: { slug: s
       }}
       className={cx(
         "grid place-items-center rounded-full transition-colors",
-        size === "sm" ? "size-9 bg-black/45 text-ivory backdrop-blur hover:bg-black/65" : "size-11 border border-white/20 hover:border-gold",
+        size === "sm" ? "size-11 min-h-[44px] min-w-[44px] bg-black/55 text-ivory backdrop-blur hover:bg-black/75 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold" : "size-12 min-h-[48px] min-w-[48px] border border-white/20 hover:border-gold hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold",
         on && "text-gold",
         className,
       )}

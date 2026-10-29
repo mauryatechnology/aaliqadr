@@ -17,7 +17,7 @@ export function QuickViewButton({ slug, name }: { slug: string; name: string }) 
         onClick={() => setOpen(true)}
         aria-label={`Quick view of ${name}`}
         aria-haspopup="dialog"
-        className="hidden size-9 place-items-center rounded-full bg-black/45 text-ivory opacity-0 backdrop-blur transition-opacity hover:bg-black/65 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:grid"
+        className="hidden size-11 min-h-[44px] min-w-[44px] place-items-center rounded-full bg-black/55 text-ivory opacity-0 backdrop-blur transition-all duration-200 hover:bg-black/75 hover:scale-105 active:scale-95 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:hover)]:grid cursor-pointer"
       >
         <Eye className="size-4" aria-hidden />
       </button>

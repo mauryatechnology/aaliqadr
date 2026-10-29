@@ -13,6 +13,21 @@ export const ZODIAC_SLUGS = [
 ] as const;
 export type ZodiacSlug = (typeof ZODIAC_SLUGS)[number];
 
+export const SIGN_ACCENTS: Record<ZodiacSlug, string> = {
+  aries: "#C4553A",
+  taurus: "#B07A7A",
+  gemini: "#D9C98A",
+  cancer: "#A9B8C9",
+  leo: "#D4A24C",
+  virgo: "#8FA58A",
+  libra: "#D9A5B3",
+  scorpio: "#7A1F3D",
+  sagittarius: "#B5652B",
+  capricorn: "#5E6B66",
+  aquarius: "#7E7BD9",
+  pisces: "#8FB8C4",
+};
+
 export interface ZodiacTheme {
   bg: string;
   surface: string;

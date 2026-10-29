@@ -52,4 +52,28 @@ tests/                 unit tests
 ## Status
 
 Phase 0 (foundations) and Phase 1 (design system + catalogue read path) are done. See [docs/16-Build-Roadmap.md](docs/16-Build-Roadmap.md) for what is next.
-# aaliqadr
+
+---
+
+## Amazon Shipping (SP-API Shipping v2)
+
+Amazon Shipping integration allows admin to shop dynamic rates, purchase labels, download thermal/PNG shipping documentation, and display real-time tracking checkpoints to customers.
+
+### Switch from Sandbox to Production
+
+Switching from Amazon Sandbox to Live Production requires **only** `.env` updates with **zero code changes**:
+
+| Variable | Sandbox Value | Production Value |
+| :--- | :--- | :--- |
+| `SPAPI_MODE` | `sandbox` | `production` |
+| `SPAPI_BASE_URL` | `https://sandbox.sellingpartnerapi-na.amazon.com` | `https://sellingpartnerapi-na.amazon.com` |
+| `LWA_CLIENT_ID` | Sandbox App Client ID | Production App Client ID |
+| `LWA_CLIENT_SECRET` | Sandbox App Client Secret | Production App Client Secret |
+| `LWA_REFRESH_TOKEN` | Sandbox Refresh Token | Production Refresh Token |
+| `AMAZON_SHIPPING_BUSINESS_ID` | `AmazonShipping_US` (or sandbox region) | Your Production Carrier Business ID (e.g. `AmazonShipping_IN` or `AmazonShipping_US`) |
+| `AMAZON_SANDBOX_USE_SAMPLE_ADDRESS` | `true` | `false` (ignored automatically when `SPAPI_MODE=production`) |
+| `WAREHOUSE_*` | Sandbox test address | Registered physical pickup warehouse address |
+| `AMAZON_CURRENCY` | `USD` (or test currency) | `INR` (for India) or destination currency |
+| `AMAZON_WEIGHT_UNIT` | `POUND` | `KILOGRAM` / `GRAM` / `POUND` |
+| `AMAZON_DIMENSION_UNIT`| `INCH` | `CENTIMETER` / `INCH` |
+

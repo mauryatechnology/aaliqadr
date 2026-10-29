@@ -34,7 +34,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
   if (!data) notFound();
   const { category, children, trail, cards } = data;
   return (
-    <>
+    <div className="relative overflow-clip bg-[#060508] text-ivory">
       <PageHero eyebrow={trail.length ? trail.map((t) => t.name).join(" · ") : "Category"} title={category.name}>
         {category.description && <p className="text-muted max-w-2xl text-lg">{category.description}</p>}
       </PageHero>
@@ -60,10 +60,10 @@ export default async function CategoryPage({ params, searchParams }: PageProps<"
             ))}
           </nav>
         )}
-        {cards.length ? <FacetedSection cards={cards} base={`/category/${slug}`} searchParams={searchParams} hide={children.length ? [] : ["category"]} /> : <p className="text-muted">New pieces are on their way. <Link href="/shop" className="underline underline-offset-4">Browse everything</Link>.</p>}
+        <FacetedSection cards={cards} base={`/category/${slug}`} searchParams={searchParams} hide={["category"]} />
       </div>
-      <JsonLd data={collectionPageLd({ name: category.name, description: category.description, path: `/category/${slug}`, items: cards.map((c) => ({ name: c.name, path: `/perfume/${c.slug}`, image: c.media[0]?.url })) })} />
-      <JsonLd data={breadcrumbLd([{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }, ...trail.map((t) => ({ name: t.name, path: `/category/${t.slug}` })), { name: category.name, path: `/category/${slug}` }])} />
-    </>
+      <JsonLd data={collectionPageLd({ name: category.name, description: category.description, path: `/category/${slug}`, items: cards.map((x) => ({ name: x.name, path: `/perfume/${x.slug}`, image: x.media[0]?.url })) })} />
+      <JsonLd data={breadcrumbLd([{ name: "Home", path: "/" }, { name: "Shop", path: "/shop" }, ...trail.map((c) => ({ name: c.name, path: `/category/${c.slug}` })), { name: category.name, path: `/category/${slug}` }])} />
+    </div>
   );
 }

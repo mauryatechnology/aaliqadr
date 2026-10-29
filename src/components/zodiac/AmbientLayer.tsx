@@ -39,8 +39,8 @@ function Particles({ count, kind }: { count: number; kind: "ember" | "star" | "p
   );
 }
 
-export function AmbientLayer({ sign, intensity = 1 }: { sign: ZodiacSlug; intensity?: number }) {
-  const ambient = ZODIAC[sign].ambient;
+export function AmbientLayer({ sign, intensity = 1 }: { sign?: ZodiacSlug; intensity?: number }) {
+  const ambient = sign ? ZODIAC[sign].ambient : "startrails";
   const n = (base: number) => Math.round(base * intensity);
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

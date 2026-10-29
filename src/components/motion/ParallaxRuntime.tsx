@@ -33,6 +33,10 @@ export function ParallaxRuntime() {
         const speed = Number(el.dataset.parallaxRoot) || 0;
         el.style.translate = `0 ${(-window.scrollY * speed).toFixed(1)}px`;
       }
+      const ring = document.querySelector<HTMLElement>(".zodiac-ring");
+      if (ring) {
+        ring.style.transform = `rotate(${(window.scrollY * 0.045).toFixed(1)}deg)`;
+      }
     };
     const onScroll = () => {
       frame ||= requestAnimationFrame(update);

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ChevronDown, CreditCard, RotateCcw, ShieldCheck, Star, Tag, Truck } from "lucide-react";
-import { ELEMENT_INFO, ZODIAC, type ZodiacSlug } from "@/config/zodiac";
+import { ChevronDown, CreditCard, RotateCcw, ShieldCheck, Sparkles, Star, Tag, Truck } from "lucide-react";
+import { ELEMENT_INFO, SIGN_ACCENTS, SIGNS, ZODIAC, type ZodiacSlug } from "@/config/zodiac";
 import { site } from "@/config/site";
 import { formatPrice } from "@/lib/money";
 import { breadcrumbLd, faqLd, JsonLd, productLd } from "@/lib/jsonld";
@@ -10,8 +10,9 @@ import { getCategories, getProductCards } from "@/server/queries/catalog";
 import { ZodiacScope } from "@/components/zodiac/ZodiacScope";
 import { AmbientLayer } from "@/components/zodiac/AmbientLayer";
 import { BottleArt } from "@/components/zodiac/BottleArt";
-import { Glyph } from "@/components/zodiac/Glyph";
+import { ZodiacGoldGlyph } from "@/components/zodiac/ZodiacGoldGlyph";
 import { NotesPyramid } from "@/components/product/NotesPyramid";
+import { ScrollStoryManager } from "@/components/product/ScrollStoryManager";
 import { ScentProfile } from "@/components/product/ScentProfile";
 import { VariantPicker } from "@/components/product/VariantPicker";
 import { ProductStateProvider } from "@/components/product/ProductState";
@@ -32,6 +33,21 @@ import { DeliveryEstimate, ShareButton, StockNotify } from "@/components/product
 import { WishlistButton } from "@/components/product/WishlistButton";
 import { AddTogether } from "@/components/product/BoughtTogether";
 import { ProductQuestions } from "@/components/product/ProductQuestions";
+
+const RASHI_DEVANAGARI: Record<string, string> = {
+  aries: "मेष",
+  taurus: "वृषभ",
+  gemini: "मिथुन",
+  cancer: "कर्क",
+  leo: "सिंह",
+  virgo: "कन्या",
+  libra: "तुला",
+  scorpio: "वृश्चिक",
+  sagittarius: "धनु",
+  capricorn: "मकर",
+  aquarius: "कुम्भ",
+  pisces: "मीन",
+};
 
 
 /**
@@ -75,7 +91,8 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
   const hasIncludes = Boolean(p.includes && p.includes.length > 0);
 
   const body = (
-    <>
+    <div data-scroll-story-root className="relative bg-[#060508] text-ivory">
+      <ScrollStoryManager signAccent={sign ? SIGN_ACCENTS[sign.slug] : undefined} />
       <PointerDepth className="relative overflow-clip">
         <Parallax speed={-0.5} className="absolute inset-x-0 -inset-y-32 -z-10 [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]">
           <Depth strength={-20} className="absolute inset-0">
@@ -91,6 +108,7 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
               imageAxis={p.imageAxis}
               sharedAfterVariant={p.display.sharedAfterVariant}
               name={p.name}
+              sign={sign?.slug}
               viewTransitionName={`product-${p.slug}`}
               fallback={
                 <Parallax speed={0.18} className="w-1/2 max-w-xs">
@@ -104,49 +122,125 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
 
           {/* Buy box */}
           <div className="flex flex-col gap-7">
-            <nav aria-label="Breadcrumb" className="text-muted flex flex-wrap gap-x-1 text-xs">
-              <Link href="/shop" className="hover:text-fg">Shop</Link>
+            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 font-caps text-[11px] tracking-[0.18em] text-muted uppercase">
+              <Link href="/shop" className="hover:text-gold transition-colors">Shop</Link>
               {trail.map((c) => (
-                <span key={c.id}>
-                  <span aria-hidden>/ </span>
-                  <Link href={routes.category(c.slug)} className="hover:text-fg">{c.name}</Link>
+                <span key={c.id} className="flex items-center gap-1.5">
+                  <span className="text-gold/40 text-[9px]">✦</span>
+                  <Link href={routes.category(c.slug)} className="hover:text-gold transition-colors">{c.name}</Link>
                 </span>
               ))}
               {sign && (
-                <span>
-                  <span aria-hidden>/ </span>
-                  <Link href={routes.sign(sign.slug)} className="hover:text-fg">{sign.name}</Link>
+                <span className="flex items-center gap-1.5">
+                  <span className="text-gold/40 text-[9px]">✦</span>
+                  <Link href={routes.sign(sign.slug)} className="hover:text-gold transition-colors">{sign.name}</Link>
                 </span>
               )}
+              <span className="flex items-center gap-1.5">
+                <span className="text-gold/40 text-[9px]">✦</span>
+                <span className="text-gold font-medium truncate max-w-[200px]">{p.name}</span>
+              </span>
             </nav>
-            <div className="flex flex-col gap-3">
-              <p className="eyebrow flex items-center gap-2">
-                {sign ? (
-                  <>
-                    <Glyph sign={sign.slug} label={false} /> {sign.name} · {sign.rashi} ·{" "}
-                    {p.concentration === "extrait" ? "Extrait de Parfum" : p.legal.genericName}
-                  </>
-                ) : p.type === "bundle" ? (
-                  "Discovery · All twelve signs"
-                ) : (
-                  (trail.at(-1)?.name ?? p.legal.genericName)
-                )}
-              </p>
-              <h1 className="font-display text-5xl leading-none sm:text-6xl">{p.name}</h1>
-              {p.tagline && <p className="text-muted text-lg">{p.tagline}.</p>}
+            <div className="flex flex-col gap-3.5">
+              {sign ? (
+                <div className="flex items-center gap-3">
+                  <div className="grid size-10 place-items-center rounded-full border border-gold/40 bg-surface/90 shadow-[0_0_14px_rgba(201,169,110,0.25)]">
+                    <ZodiacGoldGlyph sign={sign.slug as ZodiacSlug} className="size-5 shrink-0" />
+                  </div>
+                  <div>
+                    <p className="eyebrow flex items-center gap-1.5 text-gold font-medium tracking-[0.24em] text-xs">
+                      <span className="text-[9px]">✦</span>
+                      <span>{sign.element.toUpperCase()} REALM · {sign.rulingPlanet.toUpperCase()} · 28% EXTRAIT</span>
+                      <span className="text-[9px]">✦</span>
+                    </p>
+                    <p className="font-rashi text-base sm:text-lg text-ivory font-medium leading-tight">
+                      {RASHI_DEVANAGARI[sign.slug] || sign.rashi} राशि · {sign.name}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="eyebrow flex items-center gap-1.5 text-gold font-medium tracking-[0.24em] text-xs">
+                  <span className="text-[9px]">✦</span>
+                  <span>
+                    {p.type === "bundle"
+                      ? "ALL 12 CELESTIAL RASHIS · 28% EXTRAIT COFFRET"
+                      : (trail.at(-1)?.name ?? p.legal.genericName).toUpperCase()}
+                  </span>
+                  <span className="text-[9px]">✦</span>
+                </p>
+              )}
+
+              <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-light text-ivory tracking-tight leading-[1.06]">
+                {p.name}
+              </h1>
+
+              {p.tagline && (
+                <p className="text-sm sm:text-base text-ivory/85 font-light leading-relaxed max-w-xl">
+                  {p.tagline}.
+                </p>
+              )}
+
+              {/* 12-Rashi Coffret Showcase Ribbon (Universal Discovery Set) */}
+              {p.type === "bundle" && (
+                <div className="my-1 rounded-2xl border border-gold/25 bg-surface/70 p-3.5 sm:p-4 backdrop-blur-md shadow-md space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-gold/15 pb-2">
+                    <span className="font-caps text-[11px] sm:text-xs uppercase tracking-[0.2em] text-gold font-semibold flex items-center gap-1.5">
+                      <Sparkles className="size-3 text-gold" /> Includes All 12 Celestial Rashis (2ml Extrait Each):
+                    </span>
+                    <span className="font-caps text-[10px] text-ivory/70 tracking-wider">
+                      Complete House
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2">
+                    {SIGNS.map((s) => (
+                      <div
+                        key={s.slug}
+                        className="group flex items-center gap-1.5 rounded-lg border border-line/70 bg-bg/85 px-2 py-1.5 transition-all duration-200 hover:border-gold/50 hover:bg-surface"
+                        title={`${s.name} (${RASHI_DEVANAGARI[s.slug]} राशि) - ${s.fragrance.name}`}
+                      >
+                        <ZodiacGoldGlyph sign={s.slug as ZodiacSlug} className="size-3.5 shrink-0" />
+                        <div className="min-w-0 flex-1 leading-none">
+                          <p className="truncate text-[11px] text-ivory font-medium group-hover:text-gold transition-colors">
+                            {s.name}
+                          </p>
+                          <p className="font-rashi truncate text-[10px] text-gold-soft font-normal mt-0.5">
+                            {RASHI_DEVANAGARI[s.slug]}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {(p.ratingCount > 0 || p.badges.length > 0) && (
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                  {p.badges.map((b) => (
+                    <span
+                      key={b}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-caps text-[10.5px] uppercase tracking-[0.16em] text-gold font-medium shadow-xs"
+                    >
+                      <span className="text-[9px]">✦</span>
+                      <span>{BADGES[b]}</span>
+                    </span>
+                  ))}
                   {p.ratingCount > 0 && (
-                    <a href="#reviews" className="flex items-center gap-1.5 text-sm hover:text-accent">
-                      <span className="flex" aria-hidden>
-                        {[1, 2, 3, 4, 5].map((n) => <Star key={n} className="size-4" style={{ color: "var(--z-primary)" }} fill={n <= Math.round(p.ratingAvg) ? "currentColor" : "none"} />)}
+                    <a
+                      href="#reviews"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 py-1 text-xs text-ivory/90 hover:border-gold/50 transition-colors"
+                    >
+                      <span className="flex text-gold" aria-hidden>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Star
+                            key={n}
+                            className="size-3.5 fill-current"
+                          />
+                        ))}
                       </span>
-                      <span>{p.ratingAvg.toFixed(1)} · {p.ratingCount} review{p.ratingCount === 1 ? "" : "s"}</span>
+                      <span className="font-semibold text-ivory">{p.ratingAvg.toFixed(1)}</span>
+                      <span className="text-muted text-[11px]">({p.ratingCount} reviews)</span>
                     </a>
                   )}
-                  {p.badges.map((b) => (
-                    <span key={b} className="rounded-full border px-3 py-1 text-[11px] uppercase tracking-[0.16em]" style={{ borderColor: "var(--glass-border)" }}>{BADGES[b]}</span>
-                  ))}
                 </div>
               )}
             </div>
@@ -175,24 +269,28 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
               <ShareButton name={p.name} slug={p.slug} />
             </div>
 
-            <ul className="text-muted grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <li className="flex items-center gap-2">
-                <Truck className="text-accent size-4" aria-hidden /> Free shipping above {formatPrice(settings.freeShippingAboveP)}
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface/50 p-3.5 text-sm text-ivory/90">
+                <Truck className="size-4.5 shrink-0 text-gold" aria-hidden />
+                <span>Free express shipping above {formatPrice(settings.freeShippingAboveP)}</span>
               </li>
-              <li className="flex items-center gap-2">
-                <CreditCard className="text-accent size-4" aria-hidden /> Secure payment: UPI, cards, net banking{settings.codEnabled ? ", COD" : ""}
+              <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface/50 p-3.5 text-sm text-ivory/90">
+                <CreditCard className="size-4.5 shrink-0 text-gold" aria-hidden />
+                <span>UPI, cards, net banking{settings.codEnabled ? ", COD" : ""}</span>
               </li>
-              <li className="flex items-center gap-2">
-                <ShieldCheck className="text-accent size-4" aria-hidden /> Sealed, authentic, batch-coded
+              <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface/50 p-3.5 text-sm text-ivory/90">
+                <ShieldCheck className="size-4.5 shrink-0 text-gold" aria-hidden />
+                <span>Sealed, authentic, batch-coded</span>
               </li>
-              <li className="flex items-center gap-2">
-                <RotateCcw className="text-accent size-4" aria-hidden /> Damaged in transit? Replaced free
+              <li className="flex items-center gap-3 rounded-xl border border-white/10 bg-surface/50 p-3.5 text-sm text-ivory/90">
+                <RotateCcw className="size-4.5 shrink-0 text-gold" aria-hidden />
+                <span>Transit damage? Free instant replacement</span>
               </li>
             </ul>
 
             <div className="hairline" />
 
-            <div className="flex flex-col divide-y divide-white/10">
+            <div id="section-story" className="flex flex-col divide-y divide-white/10">
               <Section title={p.type === "fragrance" ? "The story" : "Description"} open>
                 {p.descriptionHtml ? (
                   <div className="rich-text" dangerouslySetInnerHTML={{ __html: p.descriptionHtml }} />
@@ -200,22 +298,12 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
                   <p className="leading-relaxed">{p.description}</p>
                 )}
               </Section>
-              {p.includes && p.includes.length > 0 && (
-                <Section title="What's inside" open>
-                  <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {p.includes.map((i) => (
-                      <li key={i.name} className="flex flex-col">
-                        <span className="text-fg">{i.name}</span>
-                        <span className="text-xs">{i.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-              )}
               {p.howToWear && (
-                <Section title="How to wear">
-                  <p className="leading-relaxed">{p.howToWear}</p>
-                </Section>
+                <div id="section-ritual">
+                  <Section title="How to wear">
+                    <p className="leading-relaxed">{p.howToWear}</p>
+                  </Section>
+                </div>
               )}
               {p.display.specs && p.specs.length > 0 && (
                 <Section title="Specifications">
@@ -273,53 +361,90 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
       </PointerDepth>
 
       {hasNotes && (
-        <section className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6">
-          <Reveal className="mb-10 flex flex-col items-center gap-3">
-            <p className="eyebrow text-gold-light/90 tracking-[0.26em]">Olfactive pyramid</p>
-            <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">How it unfolds</h2>
-            <p className="text-ivory/80 max-w-lg text-sm sm:text-base font-light">
-              Crafted in three unfolding tiers from first luminous spark to enduring skin scent.
-            </p>
-          </Reveal>
-          <NotesPyramid notes={p.notes!} />
-          <WearTimeline notes={p.notes!} />
-          {hasProfile && (
-            <Reveal className="surface mt-12 p-6 text-left sm:p-8">
-              <ScentProfile profile={p.profile!} />
-              <p className="text-ivory/85 mt-6 text-sm font-light">
-                Best experienced in <span className="text-gold-light font-medium capitalize">{p.profile!.season.join(" & ").toLowerCase()}</span>, <span className="text-gold-light font-medium">{p.profile!.timeOfDay.join(" or ")}</span>.
+        <section id="section-notes" className="relative bg-[#FAF7F2] text-[#17130F] py-20 sm:py-24 border-y border-[#E8E2D5] overflow-hidden">
+          <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+            <Reveal className="mb-10 flex flex-col items-center gap-3">
+              <p className="font-caps text-xs sm:text-[13px] tracking-[0.26em] text-[#73531F] font-semibold uppercase">
+                ✦ Olfactive Pyramid · Fragrance Evolution ✦
+              </p>
+              <h2 className="font-display text-4xl sm:text-5xl text-[#17130F] font-normal">How It Unfolds on Skin</h2>
+              <p className="text-[#5A5046] max-w-lg text-sm sm:text-base font-normal">
+                Crafted in three unfolding tiers from first luminous spark to enduring skin scent.
               </p>
             </Reveal>
-          )}
+            <NotesPyramid notes={p.notes!} />
+            <WearTimeline notes={p.notes!} />
+            {hasProfile && (
+              <Reveal className="mt-12 rounded-2xl border border-[#E8E2D5] bg-white p-6 text-left sm:p-8 shadow-[0_4px_24px_rgba(23,19,15,0.04)]">
+                <ScentProfile profile={p.profile!} />
+                <p className="text-[#5A5046] mt-6 text-sm font-normal">
+                  Best experienced in <span className="text-[#17130F] font-medium capitalize">{p.profile!.season.join(" & ").toLowerCase()}</span>, <span className="text-[#17130F] font-medium">{p.profile!.timeOfDay.join(" or ")}</span>.
+                </p>
+              </Reveal>
+            )}
+          </div>
         </section>
       )}
 
       {!hasNotes && hasIncludes && (
-        <section className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6">
-          <Reveal className="mb-12 flex flex-col items-center gap-3">
-            <p className="eyebrow text-gold-light/90 tracking-[0.26em]">The Discovery Collection</p>
-            <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">
-              {p.type === "bundle" ? "Twelve signatures to explore" : "Included in this set"}
-            </h2>
-            <p className="text-ivory/80 max-w-xl text-sm sm:text-base font-light">
+        <section className="relative bg-[#FAF7F2] text-[#17130F] py-20 sm:py-24 border-y border-[#E8E2D5] overflow-hidden">
+          <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
+            <Reveal className="mb-12 flex flex-col items-center gap-3">
+              <p className="font-caps text-xs sm:text-[13px] tracking-[0.26em] text-[#73531F] font-semibold uppercase flex items-center justify-center gap-2">
+                <span className="text-[9px]">✦</span>
+                <span>THE DISCOVERY COLLECTION · ALL 12 CELESTIAL RASHIS</span>
+                <span className="text-[9px]">✦</span>
+              </p>
+              <h2 className="font-display text-4xl sm:text-5xl text-[#17130F] font-normal">
+                {p.type === "bundle" ? "Twelve Signatures to Explore" : "Included in this set"}
+              </h2>
+              <p className="text-[#5A5046] max-w-xl text-sm sm:text-base font-normal">
+                {p.type === "bundle"
+                  ? "Every zodiac Extrait de Parfum in generous 2 ml spray atomisers. Experience one rashi a day and let your skin decide."
+                  : `${p.tagline}. Handcrafted luxury Extraits curated together.`}
+              </p>
+            </Reveal>
+            <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
               {p.type === "bundle"
-                ? "Every zodiac Extrait de Parfum in generous 2 ml spray atomisers. Experience one rashi a day and let your skin decide."
-                : `${p.tagline}. Handcrafted luxury Extraits curated together.`}
-            </p>
-          </Reveal>
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {p.includes!.map((item) => (
-              <li
-                key={item.name}
-                className="surface group relative flex flex-col items-start gap-1 p-4 sm:p-5 text-left transition-all duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-lg"
-              >
-                <span className="text-base sm:text-lg font-medium text-ivory group-hover:text-gold-light transition-colors">
-                  {item.name}
-                </span>
-                <span className="text-xs text-ivory/70 font-light">{item.detail}</span>
-              </li>
-            ))}
-          </ul>
+                ? SIGNS.map((s) => (
+                    <li key={s.slug}>
+                      <Link
+                        href={routes.product(s.fragrance.slug)}
+                        className="group relative flex h-full flex-col justify-between rounded-2xl border border-[#E8E2D5] bg-white p-5 text-left shadow-[0_4px_20px_rgba(23,19,15,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#C9A96E] hover:shadow-[0_12px_30px_rgba(23,19,15,0.08)]"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <ZodiacGoldGlyph sign={s.slug as ZodiacSlug} className="size-6 shrink-0" />
+                          <span className="font-rashi text-sm text-[#73531F] font-medium">
+                            {RASHI_DEVANAGARI[s.slug]} राशि
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-display text-lg sm:text-xl font-normal text-[#17130F] group-hover:text-[#73531F] transition-colors">
+                            {s.fragrance.name}
+                          </p>
+                          <p className="text-xs text-[#6A5E52] font-normal mt-1">
+                            {s.name} · 2 ml Extrait
+                          </p>
+                        </div>
+                        <span className="mt-4 inline-flex items-center gap-1 font-caps text-[10px] uppercase tracking-[0.18em] text-[#73531F] font-semibold">
+                          Explore Flacon →
+                        </span>
+                      </Link>
+                    </li>
+                  ))
+                : p.includes!.map((item) => (
+                    <li
+                      key={item.name}
+                      className="group relative flex flex-col items-start gap-1 p-5 text-left rounded-2xl border border-[#E8E2D5] bg-white shadow-[0_4px_20px_rgba(23,19,15,0.04)] transition-all duration-300 hover:-translate-y-1 hover:border-[#C9A96E]"
+                    >
+                      <span className="text-base sm:text-lg font-medium text-[#17130F] group-hover:text-[#73531F] transition-colors">
+                        {item.name}
+                      </span>
+                      <span className="text-xs text-[#5A5046] font-normal">{item.detail}</span>
+                    </li>
+                  ))}
+            </ul>
+          </div>
         </section>
       )}
 
@@ -397,23 +522,31 @@ export async function ProductView({ p, preview = false }: { p: ProductDTO; previ
           <JsonLd data={faqLd(buildProductFaqs(p, sign))} />
         </>
       )}
-    </>
+    </div>
   );
 
+  if (themeSign) {
+    return (
+      <ZodiacScope sign={themeSign} page>
+        {body}
+      </ZodiacScope>
+    );
+  }
+
   return (
-    <ZodiacScope sign={themeSign} page>
+    <div className="relative isolate text-ivory">
       {body}
-    </ZodiacScope>
+    </div>
   );
 }
 
 
-export /** Fragrances use their sign; element trios borrow their element's first sign; bundles stay on zodiac wheel start (Aries). */
-function themeSignFor(p: ProductDTO): ZodiacSlug {
+export /** Fragrances use their sign; element trios borrow their element's first sign; universal bundles stay on neutral brand theme. */
+function themeSignFor(p: ProductDTO): ZodiacSlug | undefined {
   if (p.zodiacSign) return p.zodiacSign;
   const firstSign = p.element ? ELEMENT_INFO[p.element]?.signs[0] : undefined;
   if (firstSign) return firstSign;
-  return "aries";
+  return undefined;
 }
 
 function buildProductFaqs(p: ProductDTO, sign?: (typeof ZODIAC)[keyof typeof ZODIAC]) {
@@ -473,12 +606,12 @@ function buildProductFaqs(p: ProductDTO, sign?: (typeof ZODIAC)[keyof typeof ZOD
 
 function Section({ title, children, open = false }: { title: string; children: React.ReactNode; open?: boolean }) {
   return (
-    <details className="group py-4" open={open}>
-      <summary className="font-caps text-fg flex cursor-pointer list-none items-center justify-between py-1 text-xs tracking-[0.22em] uppercase [&::-webkit-details-marker]:hidden">
+    <details className="group py-4.5" open={open}>
+      <summary className="font-caps text-ivory flex cursor-pointer list-none items-center justify-between py-1.5 text-xs sm:text-[13px] tracking-[0.20em] uppercase font-medium hover:text-gold transition-colors [&::-webkit-details-marker]:hidden">
         {title}
-        <ChevronDown className="size-4 transition-transform duration-300 group-open:rotate-180" aria-hidden />
+        <ChevronDown className="size-4 text-gold transition-transform duration-300 group-open:rotate-180" aria-hidden />
       </summary>
-      <div className="text-muted pt-3 text-sm">{children}</div>
+      <div className="text-ivory/85 pt-3.5 text-base leading-relaxed max-w-prose">{children}</div>
     </details>
   );
 }

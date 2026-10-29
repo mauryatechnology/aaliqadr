@@ -42,10 +42,10 @@ export function CartView() {
         <h2 className="font-display text-3xl">Your bag is empty</h2>
         <p className="text-muted">Begin with your sign, or let the Discovery Coffret decide.</p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href="/find-my-sign" className="rounded-full bg-gold px-6 py-3 font-caps text-[0.7rem] uppercase tracking-[0.22em] text-obsidian">
+          <Link href="/find-my-sign" className="rounded-full bg-gold px-7 py-3.5 font-caps text-xs sm:text-[13px] font-semibold uppercase tracking-[0.18em] text-obsidian shadow-md hover:bg-[#E0C892] transition-colors">
             Find my sign
           </Link>
-          <Link href="/shop" className="rounded-full border border-gold/40 px-6 py-3 font-caps text-[0.7rem] uppercase tracking-[0.22em]">
+          <Link href="/shop" className="rounded-full border border-gold/40 px-7 py-3.5 font-caps text-xs sm:text-[13px] font-semibold uppercase tracking-[0.18em] text-ivory hover:border-gold hover:text-gold transition-colors">
             Shop all
           </Link>
         </div>
@@ -123,7 +123,7 @@ export function CartView() {
         <Link
           href="/checkout"
           aria-disabled={!view || view.lines.length === 0}
-          className="flex h-12 items-center justify-center rounded-full bg-gold font-caps text-[0.7rem] uppercase tracking-[0.22em] text-obsidian aria-disabled:pointer-events-none aria-disabled:opacity-60"
+          className="flex h-12 items-center justify-center rounded-full bg-gold font-caps text-xs sm:text-[13px] font-semibold uppercase tracking-[0.18em] text-obsidian shadow-md hover:bg-[#E0C892] transition-colors aria-disabled:pointer-events-none aria-disabled:opacity-60"
         >
           Checkout securely
         </Link>

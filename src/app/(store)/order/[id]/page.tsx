@@ -12,14 +12,14 @@ export const metadata: Metadata = { title: "Your order", robots: { index: false,
 /** Order confirmation and status, reachable by the emailed link (with its key) or by the owner. */
 export default function OrderPage({ params, searchParams }: PageProps<"/order/[id]">) {
   return (
-    <>
+    <div className="relative overflow-clip bg-[#060508] text-ivory">
       <PageHero eyebrow="Thank you" title="Your order" />
       <div className="mx-auto max-w-[1360px] px-4 pb-24 sm:px-6">
         <Suspense fallback={<div className="surface h-96 animate-pulse" />}>
           <Content params={params} searchParams={searchParams} />
         </Suspense>
       </div>
-    </>
+    </div>
   );
 }
 

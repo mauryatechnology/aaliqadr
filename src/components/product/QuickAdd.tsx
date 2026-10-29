@@ -56,16 +56,16 @@ export function QuickAdd({ product }: { product: Pick<ProductCardDTO, "slug" | "
         aria-label={multi ? `Choose a size of ${product.name} to add to bag` : `Add ${product.name} to bag`}
         aria-haspopup={multi ? "dialog" : undefined}
         aria-expanded={multi ? open : undefined}
-        className="absolute bottom-2.5 right-2.5 z-20 grid size-9 place-items-center rounded-full bg-gold text-obsidian shadow-lg transition-all duration-300 hover:scale-110 hover:bg-gold-light focus-visible:opacity-100 active:scale-95 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+        className="absolute bottom-2.5 right-2.5 z-20 grid size-11 min-h-[44px] min-w-[44px] place-items-center rounded-full bg-gold text-obsidian shadow-lg transition-all duration-200 hover:scale-105 hover:bg-gold-soft focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 active:scale-95 active:bg-gold-deep sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 cursor-pointer"
       >
-        <ShoppingBag className="size-4" strokeWidth={2} aria-hidden />
+        <ShoppingBag className="size-4" strokeWidth={1.5} aria-hidden />
       </button>
       {open && (
-        <div ref={panelRef} role="dialog" aria-label={`Sizes of ${product.name}`} className="surface absolute inset-x-2 bottom-2 z-30 flex flex-col gap-1.5 p-3">
-          <div className="flex items-center justify-between">
-            <p className="eyebrow !text-[0.6rem]">Choose a size</p>
-            <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="rounded-full p-1 text-muted hover:text-fg">
-              <X className="size-4" />
+        <div ref={panelRef} role="dialog" aria-label={`Sizes of ${product.name}`} className="absolute inset-x-2 bottom-2 z-30 flex flex-col gap-1.5 border border-line bg-surface/98 p-3 shadow-2xl backdrop-blur-md">
+          <div className="flex items-center justify-between pb-1 border-b border-line">
+            <p className="font-caps text-[10px] uppercase tracking-[0.2em] text-gold">Choose edition</p>
+            <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="p-1 text-muted transition-colors hover:text-ivory">
+              <X className="size-3.5" />
             </button>
           </div>
           {variants.map((v) => (
@@ -74,10 +74,10 @@ export function QuickAdd({ product }: { product: Pick<ProductCardDTO, "slug" | "
               type="button"
               disabled={!v.inStock}
               onClick={() => add(v.sku)}
-              className="flex items-center justify-between gap-2 rounded-lg border border-white/10 px-3 py-2 text-left text-xs transition-colors hover:border-gold/60 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex items-center justify-between gap-2 border border-line px-3 py-2 text-left text-xs text-ivory transition-colors hover:border-gold/60 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <span className={v.inStock ? "" : "line-through"}>{v.label}</span>
-              <span className="text-muted">{v.inStock ? formatPrice(v.priceP) : "Sold out"}</span>
+              <span className="font-sans">{v.label}</span>
+              <span className="font-display text-muted">{v.inStock ? formatPrice(v.priceP) : "Sold out"}</span>
             </button>
           ))}
         </div>

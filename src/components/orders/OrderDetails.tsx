@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Check, FileText, Package, Truck } from "lucide-react";
+import { Check, FileText, Package } from "lucide-react";
 import { formatPrice } from "@/lib/money";
 import { customerCanCancel, PAYMENT_LABEL, PROGRESS_STEPS, STATUS_LABEL } from "@/lib/order-status";
 import { cn } from "@/lib/cn";
@@ -8,6 +8,7 @@ import { routes } from "@/lib/routes";
 import type { OrderView } from "@/server/queries/account";
 import { BottleArt } from "@/components/zodiac/BottleArt";
 import { CancelOrderButton, RetryPaymentButton } from "./OrderActions";
+import { ShipmentTrackingTimeline } from "./ShipmentTrackingTimeline";
 
 const dateFmt = new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" });
 
@@ -57,19 +58,12 @@ export function OrderDetails({ order, accessKey, showKeyInLinks }: { order: Orde
             </ol>
           )}
 
-          {order.shipment?.awb && (
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 p-4 text-sm">
-              <Truck className="size-5 text-gold" aria-hidden />
-              <span>
-                {order.shipment.courier} · tracking <span className="font-mono">{order.shipment.awb}</span>
-              </span>
-              {order.shipment.trackingUrl && (
-                <a href={order.shipment.trackingUrl} target="_blank" rel="noopener noreferrer" className="ml-auto text-gold underline underline-offset-4">
-                  Track shipment
-                </a>
-              )}
-            </div>
-          )}
+          {/* Vertical Flipkart/Amazon-style carrier tracking timeline */}
+          <ShipmentTrackingTimeline
+            orderId={order._id}
+            accessKey={showKeyInLinks ? accessKey : undefined}
+            orderStatus={order.status}
+          />
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             {order.invoice?.number && (

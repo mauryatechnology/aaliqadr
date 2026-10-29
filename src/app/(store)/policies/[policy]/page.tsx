@@ -42,7 +42,7 @@ export default async function PolicyPage({ params }: PageProps<"/policies/[polic
   const p = await resolvePolicy(policy);
   if (!p) notFound();
   return (
-    <article>
+    <article className="relative overflow-clip bg-[#060508] text-ivory">
       <PageHero eyebrow="Policies" title={p.title}>
         <p className="text-muted max-w-2xl text-lg">{p.summary}</p>
       </PageHero>

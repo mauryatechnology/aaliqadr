@@ -17,7 +17,23 @@ const GalleryLightbox = dynamic(() => import("./GalleryLightbox").then((m) => m.
  * physics. Shows exactly the selected variant's photos (plan.md §8.6): its own, else its
  * option value's, then shared ones; never another variant's.
  */
-export function ProductGallery({ media, name, fallback, viewTransitionName, imageAxis, sharedAfterVariant = true }: { media: MediaItem[]; name: string; fallback: ReactNode; viewTransitionName: string; imageAxis?: number; sharedAfterVariant?: boolean }) {
+export function ProductGallery({
+  media,
+  name,
+  fallback,
+  viewTransitionName,
+  imageAxis,
+  sharedAfterVariant = true,
+  sign,
+}: {
+  media: MediaItem[];
+  name: string;
+  fallback: ReactNode;
+  viewTransitionName: string;
+  imageAxis?: number;
+  sharedAfterVariant?: boolean;
+  sign?: string;
+}) {
   const { variants, sku } = useProductState();
   const items = imagesFor({ media, variants, imageAxis, display: { sharedAfterVariant } }, sku);
   const track = useRef<HTMLDivElement>(null);
@@ -64,7 +80,15 @@ export function ProductGallery({ media, name, fallback, viewTransitionName, imag
 
   if (!items.length)
     return (
-      <div className="surface relative grid aspect-[4/5] place-items-center overflow-clip" style={{ viewTransitionName, background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)" }}>
+      <div
+        className="surface relative grid aspect-[4/5] place-items-center overflow-clip rounded-2xl border border-gold/25 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+        style={{
+          viewTransitionName,
+          background: sign
+            ? "radial-gradient(80% 70% at 50% 35%, color-mix(in srgb, var(--z-primary) 22%, transparent), var(--z-bg) 85%)"
+            : "radial-gradient(80% 70% at 50% 35%, rgba(201,169,110,0.14), #14121A 85%)",
+        }}
+      >
         {fallback}
       </div>
     );
@@ -109,8 +133,14 @@ export function ProductGallery({ media, name, fallback, viewTransitionName, imag
             if (e.key === "ArrowRight") go(index + 1);
             if (e.key === "ArrowLeft") go(index - 1);
           }}
-          className="surface flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto overflow-y-clip rounded-[inherit] outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-[var(--z-primary)] [&::-webkit-scrollbar]:hidden"
-          style={{ viewTransitionName, background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 85%)", animation: "aq-fade 0.35s ease" }}
+          className="surface flex aspect-[4/5] snap-x snap-mandatory overflow-x-auto overflow-y-clip rounded-2xl border border-gold/25 outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-gold [&::-webkit-scrollbar]:hidden shadow-[0_16px_40px_rgba(0,0,0,0.6)] backdrop-blur-md"
+          style={{
+            viewTransitionName,
+            background: sign
+              ? "radial-gradient(80% 70% at 50% 35%, color-mix(in srgb, var(--z-primary) 22%, transparent), var(--z-bg) 85%)"
+              : "radial-gradient(80% 70% at 50% 35%, rgba(201,169,110,0.14), #14121A 85%)",
+            animation: "aq-fade 0.35s ease",
+          }}
         >
           {items.map((m, i) => (
             <div key={m.id} data-index={i} className="relative size-full shrink-0 snap-center" aria-roledescription="slide" aria-label={`${i + 1} of ${items.length}`}>
@@ -125,7 +155,10 @@ export function ProductGallery({ media, name, fallback, viewTransitionName, imag
                     quality={85}
                     sizes="(min-width: 1024px) 50vw, 100vw"
                     unoptimized={m.url.endsWith(".svg")}
-                    className={m.url.endsWith(".svg") ? "object-contain p-6 drop-shadow-[0_15px_30px_rgba(0,0,0,.45)]" : "object-cover"}
+                    className={m.url.endsWith(".svg") ? "object-contain p-6 sm:p-8 max-h-[580px] drop-shadow-[0_20px_45px_rgba(0,0,0,.75)] transition-transform duration-700 ease-lux" : "object-cover transition-transform duration-700 ease-lux"}
+                    style={{
+                      transform: "rotate(var(--story-bottle-rotate, 0deg)) scale(var(--bottle-size-scale, 1))",
+                    }}
                     preload={i === 0}
                     loading={i === 0 ? "eager" : "lazy"}
                     placeholder={m.blurDataURL && !m.url.endsWith(".svg") ? "blur" : "empty"}

@@ -400,15 +400,23 @@ export function CheckoutForm({ user, addresses, giftWrapPriceP }: Props) {
           )}
 
           {pendingPayment ? (
-            <button type="button" onClick={retry} disabled={placing} className="flex h-14 items-center justify-center gap-2 rounded-full bg-gold font-caps text-xs uppercase tracking-[0.22em] text-obsidian disabled:opacity-60">
+            <button type="button" onClick={retry} disabled={placing} className="flex h-14 items-center justify-center gap-2 rounded-full bg-gold font-caps text-xs sm:text-[13px] font-semibold uppercase tracking-[0.18em] text-obsidian shadow-[0_4px_24px_rgba(201,169,110,0.35)] hover:bg-[#E0C892] transition-all disabled:opacity-60 cursor-pointer">
               {placing ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />} Retry payment
             </button>
           ) : (
-            <button type="button" onClick={placeOrder} disabled={!quote || placing || quoting} className="flex h-14 items-center justify-center gap-2 rounded-full bg-gold font-caps text-xs uppercase tracking-[0.22em] text-obsidian disabled:opacity-60">
+            <button type="button" onClick={placeOrder} disabled={!quote || placing || quoting} className="flex h-14 items-center justify-center gap-2 rounded-full bg-gold font-caps text-xs sm:text-[13px] font-semibold uppercase tracking-[0.18em] text-obsidian shadow-[0_4px_24px_rgba(201,169,110,0.35)] hover:bg-[#E0C892] transition-all disabled:opacity-60 cursor-pointer">
               {placing ? <Loader2 className="size-4 animate-spin" /> : <Lock className="size-4" />}
               {method === "cod" ? "Place order" : `Pay ${quote ? formatPrice(quote.totalP) : ""}`}
             </button>
           )}
+
+          <div className="flex items-center justify-center gap-3 pt-1 text-[11px] text-ivory/65">
+            <span className="flex items-center gap-1">
+              <Lock className="size-3 text-gold" /> 256-bit Bank-grade Encryption
+            </span>
+            <span>·</span>
+            <span>Razorpay Verified</span>
+          </div>
           <p className="flex items-center gap-2 text-xs text-muted">
             <Truck className="size-4" aria-hidden /> Ships in 1–2 working days · Secure payments by Razorpay
           </p>

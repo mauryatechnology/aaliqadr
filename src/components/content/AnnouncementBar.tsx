@@ -8,7 +8,7 @@ export async function AnnouncementBar() {
   if (!a.active || !a.text) return null;
   const text = <span className="font-caps tracking-[0.18em]">{a.text}</span>;
   return (
-    <div className="relative z-50 bg-gold px-4 py-2 text-center text-[11px] uppercase text-obsidian">
+    <div className="relative z-50 bg-gold px-4 py-2.5 text-center text-xs uppercase tracking-[0.2em] font-medium text-obsidian">
       {a.href ? (a.href.startsWith("/") ? <Link href={a.href as Route} className="hover:underline">{text}</Link> : <a href={a.href} className="hover:underline" rel="noreferrer">{text}</a>) : text}
     </div>
   );

@@ -1,20 +1,21 @@
-import { discountPercent, formatPrice, type Paise } from "@/lib/money";
+import { formatPrice, type Paise } from "@/lib/money";
 import { cx as cn } from "@/lib/cx";
 
-export function Price({ priceP, mrpP, from = false, className }: { priceP: Paise; mrpP?: Paise; from?: boolean; className?: string }) {
-  const off = mrpP ? discountPercent(mrpP, priceP) : 0;
+export function Price({
+  priceP,
+  from = false,
+  className,
+}: {
+  priceP: Paise;
+  mrpP?: Paise;
+  from?: boolean;
+  className?: string;
+}) {
   return (
-    <span className={cn("inline-flex flex-wrap items-baseline gap-x-2", className)}>
-      {from && <span className="text-xs text-muted">from</span>}
-      <span className="font-medium text-fg">{formatPrice(priceP)}</span>
-      {off > 0 && mrpP ? (
-        <>
-          <s className="text-sm text-muted" aria-label={`MRP ${formatPrice(mrpP)}`}>
-            {formatPrice(mrpP)}
-          </s>
-          <span className="text-xs text-accent">{off}% off</span>
-        </>
-      ) : null}
+    <span className={cn("inline-flex flex-wrap items-baseline gap-x-2 text-ivory", className)}>
+      {from && <span className="text-xs text-muted font-normal">from</span>}
+      <span className="font-display font-medium text-ivory">{formatPrice(priceP)}</span>
     </span>
   );
 }
+

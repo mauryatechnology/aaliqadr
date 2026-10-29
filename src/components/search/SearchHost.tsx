@@ -42,11 +42,22 @@ export function SearchHost({ popular }: { popular: string[] }) {
 }
 
 /** A link to /search that opens the overlay instead when JavaScript is running. */
-export function SearchLink({ className, children, label = "Search" }: { className?: string; children: React.ReactNode; label?: string }) {
+export function SearchLink({
+  className,
+  children,
+  label = "Search",
+  title,
+}: {
+  className?: string;
+  children: React.ReactNode;
+  label?: string;
+  title?: string;
+}) {
   return (
     <Link
       href="/search"
       aria-label={label}
+      title={title ?? label}
       className={className}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;

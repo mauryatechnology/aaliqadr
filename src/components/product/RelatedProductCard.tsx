@@ -23,11 +23,11 @@ export function RelatedProductCard({ product, priority = false }: { product: Pro
     <article
       data-zodiac={sign?.slug}
       data-element={sign?.element ?? product.element}
-      className="group surface sheen relative flex h-full flex-col overflow-hidden p-0 shadow-md transition-transform duration-500 ease-lux hover:-translate-y-1 hover:shadow-xl"
+      className="group relative flex h-full flex-col overflow-hidden rounded-none border border-line bg-surface transition-all duration-500 ease-lux hover:-translate-y-1 hover:border-gold/40 hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)]"
       style={{ viewTransitionName: `product-${product.slug}` }}
     >
       <Link href={routes.product(product.slug)} className="flex h-full flex-col focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold">
-        <div className="relative aspect-[4/5] overflow-hidden" style={{ background: "radial-gradient(80% 70% at 50% 35%, var(--z-g2), var(--z-bg) 80%)" }}>
+        <div className="relative aspect-[4/5] overflow-hidden bg-surface" style={{ background: "radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--z-primary, #C9A96E) 18%, transparent) 0%, transparent 72%)" }}>
           {image ? (
             <Image
               src={image.url}
@@ -50,13 +50,13 @@ export function RelatedProductCard({ product, priority = false }: { product: Pro
             <Image src={second.url} alt="" fill sizes="(min-width: 1024px) 25vw, 50vw" unoptimized={second.url.endsWith(".svg")} className={second.url.endsWith(".svg") ? "object-contain p-4 opacity-0 transition-opacity duration-700 ease-lux [@media(hover:hover)]:group-hover:opacity-100" : "object-cover opacity-0 transition-opacity duration-700 ease-lux [@media(hover:hover)]:group-hover:opacity-100"} />
           )}
           {product.inStock && product.badges[0] && (
-            <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[9px] uppercase tracking-widest text-ivory backdrop-blur sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[10px]">
+            <span className="absolute left-2.5 top-2.5 border border-gold/30 bg-bg/90 px-2 py-0.5 font-caps text-[9px] uppercase tracking-[0.2em] text-gold backdrop-blur-sm">
               {BADGES[product.badges[0]]}
             </span>
           )}
           {!product.inStock && (
-            <span className="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-0.5 text-[9px] uppercase tracking-widest text-red-300 sm:left-3 sm:top-3 sm:px-3 sm:py-1 sm:text-[10px]">
-              Sold out
+            <span className="absolute left-2.5 top-2.5 border border-line bg-bg/90 px-2 py-0.5 font-caps text-[9px] uppercase tracking-[0.2em] text-muted backdrop-blur-sm">
+              Archived
             </span>
           )}
         </div>
@@ -80,7 +80,7 @@ export function RelatedProductCard({ product, priority = false }: { product: Pro
           )}
 
           <Price priceP={product.fromPriceP} mrpP={product.fromMrpP} from className="mt-auto pt-1 text-xs sm:pt-2 sm:text-base font-semibold" />
-          {product.inStock && left > 0 && left <= 3 && <span className="text-[11px] text-amber-300">Only {left} left</span>}
+          {product.inStock && left > 0 && left <= 3 && <span className="font-caps text-[10px] uppercase tracking-wider text-gold/80">Only {left} left</span>}
         </div>
       </Link>
       <div className="absolute right-2.5 top-2.5 z-20 flex flex-col gap-1.5">

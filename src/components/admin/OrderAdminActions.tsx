@@ -5,13 +5,28 @@ import { Loader2, PackageCheck, Truck, XCircle } from "lucide-react";
 import { addOrderNoteAction, advanceOrderAction, cancelOrderAdminAction } from "@/actions/admin/orders";
 import type { FormState } from "@/actions/admin/shared";
 import type { OrderStatus } from "@/lib/order-status";
+import { cn } from "@/lib/cn";
+import { AmazonShippingPanel, type AmazonPackageInfo } from "./AmazonShippingPanel";
 import { btnDanger, btnPrimary, btnSecondary, FieldLabel, inputCls } from "./ui";
 import { FormStatus } from "./FormStatus";
 
 const idle: FormState = {};
 const COURIERS = ["Delhivery", "Blue Dart", "DTDC", "Ekart", "Xpressbees", "India Post", "Shadowfax", "Self delivery"];
 
-export function OrderAdminActions({ orderId, status, canCancel, paidOnline }: { orderId: string; status: OrderStatus; canCancel: boolean; paidOnline: boolean }) {
+export function OrderAdminActions({
+  orderId,
+  status,
+  canCancel,
+  paidOnline,
+  packageInfo,
+}: {
+  orderId: string;
+  status: OrderStatus;
+  canCancel: boolean;
+  paidOnline: boolean;
+  packageInfo?: AmazonPackageInfo;
+}) {
+  const [provider, setProvider] = useState<"manual" | "amazon">("manual");
   const [advanceState, advance, advancing] = useActionState(advanceOrderAction, idle);
   const [cancelState, cancel, cancelling] = useActionState(cancelOrderAdminAction, idle);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -32,24 +47,65 @@ export function OrderAdminActions({ orderId, status, canCancel, paidOnline }: { 
       )}
 
       {canShip && (
-        <form action={advance} className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold"><Truck className="size-4" aria-hidden /> Ship this order</p>
-          <input type="hidden" name="orderId" value={orderId} />
-          <input type="hidden" name="to" value="shipped" />
-          <FieldLabel label="Courier" error={fe("courier")}>
-            <input name="courier" list="couriers" className={inputCls} placeholder="e.g. Delhivery" required />
-            <datalist id="couriers">{COURIERS.map((c) => <option key={c} value={c} />)}</datalist>
-          </FieldLabel>
-          <FieldLabel label="Tracking (AWB) number" error={fe("awb")}>
-            <input name="awb" className={`${inputCls} font-mono`} required />
-          </FieldLabel>
-          <FieldLabel label="Tracking link (optional)" error={fe("trackingUrl")} hint="Shown to the customer and in their email.">
-            <input name="trackingUrl" type="url" className={inputCls} placeholder="https://" />
-          </FieldLabel>
-          <button type="submit" disabled={advancing} className={btnPrimary}>
-            {advancing && <Loader2 className="size-4 animate-spin" />} Mark shipped & email customer
-          </button>
-        </form>
+        <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Truck className="size-4" aria-hidden /> Ship this order
+          </p>
+
+          {/* Shipping provider selector */}
+          <div className="flex rounded-lg border border-neutral-200 bg-neutral-100 p-1 text-xs font-medium" role="tablist" aria-label="Shipping Provider">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={provider === "amazon"}
+              onClick={() => setProvider("amazon")}
+              className={cn(
+                "flex-1 rounded-md py-1.5 transition-colors",
+                provider === "amazon"
+                  ? "bg-white text-neutral-900 shadow-sm font-semibold"
+                  : "text-neutral-600 hover:text-neutral-900",
+              )}
+            >
+              Amazon Shipping
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={provider === "manual"}
+              onClick={() => setProvider("manual")}
+              className={cn(
+                "flex-1 rounded-md py-1.5 transition-colors",
+                provider === "manual"
+                  ? "bg-white text-neutral-900 shadow-sm font-semibold"
+                  : "text-neutral-600 hover:text-neutral-900",
+              )}
+            >
+              Manual / Other Courier
+            </button>
+          </div>
+
+          {provider === "amazon" ? (
+            <AmazonShippingPanel orderId={orderId} packageInfo={packageInfo} />
+          ) : (
+            <form action={advance} className="flex flex-col gap-3">
+              <input type="hidden" name="orderId" value={orderId} />
+              <input type="hidden" name="to" value="shipped" />
+              <FieldLabel label="Courier" error={fe("courier")}>
+                <input name="courier" list="couriers" className={inputCls} placeholder="e.g. Delhivery" required />
+                <datalist id="couriers">{COURIERS.map((c) => <option key={c} value={c} />)}</datalist>
+              </FieldLabel>
+              <FieldLabel label="Tracking (AWB) number" error={fe("awb")}>
+                <input name="awb" className={`${inputCls} font-mono`} required />
+              </FieldLabel>
+              <FieldLabel label="Tracking link (optional)" error={fe("trackingUrl")} hint="Shown to the customer and in their email.">
+                <input name="trackingUrl" type="url" className={inputCls} placeholder="https://" />
+              </FieldLabel>
+              <button type="submit" disabled={advancing} className={btnPrimary}>
+                {advancing && <Loader2 className="size-4 animate-spin" />} Mark shipped & email customer
+              </button>
+            </form>
+          )}
+        </div>
       )}
 
       {status === "shipped" && (

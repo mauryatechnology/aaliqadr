@@ -3,52 +3,171 @@
 
 /* ── Brand defaults (neutral pages). Zodiac scopes override the --z-* layer. ── */
 :root {
-  /* Admin table density (plan.md §2.1): compact by default, toggled per browser. */
-  --adm-px: 0.75rem;
-  --adm-py: 0.5rem;
-  --z-bg: #0b0a0f;
-  --z-surface: #14121c;
-  --z-primary: #c4a044;
-  --z-secondary: #8a8494;
-  --z-accent: #c4a044;
-  --z-text: #f5f0e6;
-  --z-muted: #a9a3b2;
-  --z-on-primary: #0b0a0f;
-  --z-glow: #c4a044;
-  --z-g1: #0b0a0f;
-  --z-g2: #2a2318;
-  --z-g3: #c4a044;
+  /* Base (60%) */
+  --bg: #0B0A0F;
+  --surface: #14121A;
+  --line: #2A2633;
 
-  /* Default material: frosted glass. */
+  /* Text (30%) */
+  --ivory: #F4EFE6;
+  --muted: #A8A3B3;
+
+  /* Accent (10%) */
+  --gold: #C9A96E;
+  --gold-soft: #E0C892;
+  --gold-deep: #9C7F4C;
+  --sign-accent: #C9A96E;
+
+  /* Luxury International Palette Tokens (Phase 2 Design System) */
+  --espresso: #17130F;
+  --warm-ivory: #F8F5EF;
+  --champagne-gold: #C6A66B;
+  --antique-bronze: #9B8053;
+  --soft-beige: #E8E0D4;
+  --text-primary: #29231D;
+  --text-secondary: #71695F;
+
+  /* Brand Layer Defaults */
+  --z-bg: var(--bg);
+  --z-surface: var(--surface);
+  --z-primary: var(--gold);
+  --z-secondary: var(--muted);
+  --z-accent: var(--gold);
+  --z-text: var(--ivory);
+  --z-muted: var(--muted);
+  --z-on-primary: var(--bg);
+  --z-glow: var(--gold);
+  --z-g1: var(--bg);
+  --z-g2: var(--surface);
+  --z-g3: var(--gold);
+
+  /* Material variables */
   --glass-blur: 16px;
-  --glass-alpha: 0.6;
-  --glass-border: color-mix(in oklab, var(--z-accent) 28%, transparent);
-  --shadow-material: 0 18px 50px -24px rgb(0 0 0 / 0.7);
+  --glass-alpha: 0.75;
+  --glass-border: rgba(201, 169, 110, 0.16);
+  --shadow-material: 0 16px 40px -20px rgb(0 0 0 / 0.8);
+
+  
+  /* ── Design System Tokens (Phase 1 Standardized UX Tokens) ── */
+  /* Spacing Scale (4/8/12/16/20/24/32/40/48/64/80/96px) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Typographic Scale & Line Heights */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+  --leading-loose: 1.8;
+
+  /* Line Widths */
+  --max-ch: 65ch;
+
+  /* Touch Targets */
+  --min-touch-target: 44px;
+
+  /* Radii Scale */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Shadows Scale */
+  --shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 16px 40px rgba(0, 0, 0, 0.7);
+  --shadow-gold-glow: 0 0 24px rgba(201, 169, 110, 0.25);
+
+  /* Transitions */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --transition-fast: 150ms var(--ease-lux);
+  --transition-normal: 250ms var(--ease-lux);
+  --transition-slow: 400ms var(--ease-lux);
+
+  /* WCAG AA Certified High-Contrast Text Tokens */
+  --text-contrast-dark: #F7F4EE;
+  --text-contrast-muted: #BCB7C6;
+  --text-contrast-light-body: #1E1A16;
+  --text-contrast-light-muted: #564E44;
+  --text-contrast-light-gold: #73531F;
 
   color-scheme: dark;
 }
 
+/* Per-Sign Accents (Used ONLY for radial glow at 15-25% opacity, 1px hairline under name, active state) */
+[data-zodiac="aries"] { --sign-accent: #C4553A; }
+[data-zodiac="taurus"] { --sign-accent: #B07A7A; }
+[data-zodiac="gemini"] { --sign-accent: #D9C98A; }
+[data-zodiac="cancer"] { --sign-accent: #A9B8C9; }
+[data-zodiac="leo"] { --sign-accent: #D4A24C; }
+[data-zodiac="virgo"] { --sign-accent: #8FA58A; }
+[data-zodiac="libra"] { --sign-accent: #D9A5B3; }
+[data-zodiac="scorpio"] { --sign-accent: #7A1F3D; }
+[data-zodiac="sagittarius"] { --sign-accent: #B5652B; }
+[data-zodiac="capricorn"] { --sign-accent: #5E6B66; }
+[data-zodiac="aquarius"] { --sign-accent: #7E7BD9; }
+[data-zodiac="pisces"] { --sign-accent: #8FB8C4; }
+
 /* Animate theme changes between signs (docs/09 §4.3). */
 @property --z-bg { syntax: "<color>"; inherits: true; initial-value: #0b0a0f; }
-@property --z-primary { syntax: "<color>"; inherits: true; initial-value: #c4a044; }
-@property --z-glow { syntax: "<color>"; inherits: true; initial-value: #c4a044; }
+@property --z-primary { syntax: "<color>"; inherits: true; initial-value: #c9a96e; }
+@property --z-glow { syntax: "<color>"; inherits: true; initial-value: #c9a96e; }
 
 @theme inline {
-  --font-display: var(--font-playfair), "Playfair Display", Georgia, serif;
-  --font-caps: var(--font-cinzel), "Cinzel", Georgia, serif;
-  --font-sans: var(--font-jakarta), "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-caps: var(--font-jost), "Jost", sans-serif;
+  --font-sans: var(--font-jost), "Jost", system-ui, sans-serif;
+  --font-rashi: var(--font-tiro), "Tiro Devanagari Hindi", serif;
 
-  --color-gold: #c4a044;
-  --color-gold-light: #e8cf8a;
-  --color-gold-deep: #9c7a2e;
-  --color-ivory: #f5f0e6;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ivory: var(--ivory);
+  --color-muted: var(--muted);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-deep: var(--gold-deep);
   --color-obsidian: #0b0a0f;
+  --color-sign-accent: var(--sign-accent);
 
-  --color-bg: var(--z-bg);
-  --color-surface: var(--z-surface);
-  --color-primary: var(--z-primary);
-  --color-secondary: var(--z-secondary);
-  --color-accent: var(--z-accent);
+  /* Luxury international palette utilities */
+  --color-espresso: var(--espresso);
+  --color-warm-ivory: var(--warm-ivory);
+  --color-champagne: var(--champagne-gold);
+  --color-bronze: var(--antique-bronze);
+  --color-soft-beige: var(--soft-beige);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+
+  --color-fg: var(--ivory);
+  --color-primary: var(--gold);
+  --color-secondary: var(--muted);
+  --color-accent: var(--gold);
   --color-fg: var(--z-text);
   --color-muted: var(--z-muted);
   --color-on-primary: var(--z-on-primary);
@@ -58,13 +177,13 @@
   --ease-ember: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-fluid: cubic-bezier(0.45, 0, 0.2, 1);
 
-  --radius-card: 1.25rem;
+  --radius-card: 1rem;
 
   --animate-aurora: aurora 22s var(--ease-fluid) infinite alternate;
   --animate-shimmer: shimmer 3.2s linear infinite;
   --animate-float: float 7s ease-in-out infinite;
   --animate-rise: rise 9s linear infinite;
-  --animate-spin-slow: spin 90s linear infinite;
+  --animate-spin-slow: spin 80s linear infinite;
   --animate-orbit-cw: orbit-cw 28s linear infinite;
   --animate-orbit-ccw: orbit-ccw 28s linear infinite;
 }
@@ -110,7 +229,37 @@
     background: transparent;
     color: var(--color-fg);
     font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
     transition: color 600ms var(--ease-lux);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    line-height: var(--leading-tight);
+    color: var(--z-text);
+    text-wrap: balance;
+  }
+  h1 {
+    font-size: clamp(2.25rem, 5vw, 3.75rem);
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+    letter-spacing: -0.015em;
+  }
+  h3 {
+    font-size: clamp(1.35rem, 2.5vw, 2rem);
+    letter-spacing: -0.01em;
+  }
+  h4 {
+    font-size: clamp(1.125rem, 2vw, 1.35rem);
+  }
+  p {
+    line-height: var(--leading-relaxed);
+  }
+  .prose-measure {
+    max-width: var(--max-ch);
   }
   .font-display {
     font-feature-settings: "kern", "liga", "dlig", "onum";
@@ -136,6 +285,10 @@
     outline-offset: 3px;
     border-radius: 4px;
   }
+  /* Accessible touch targets & interactive elements */
+  button, [role="button"], a[class*="btn"] {
+    touch-action: manipulation;
+  }
   ::selection {
     background: color-mix(in oklab, var(--z-primary) 55%, transparent);
     color: var(--z-text);
@@ -143,6 +296,96 @@
 }
 
 @layer components {
+  /* ── Interactive Button & Touch-Target Design System Tokens ── */
+  .min-touch-target {
+    min-height: var(--min-touch-target, 44px);
+    min-width: var(--min-touch-target, 44px);
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: var(--min-touch-target, 44px);
+    min-width: var(--min-touch-target, 44px);
+    padding: 0.75rem 1.75rem;
+    border-radius: var(--radius-full, 9999px);
+    background-color: var(--gold);
+    color: #0B0A0F;
+    font-family: var(--font-caps);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: var(--text-xs);
+    box-shadow: 0 4px 18px rgba(201, 169, 110, 0.25);
+    transition: all var(--duration-normal, 200ms) var(--ease-lux);
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn-primary:hover {
+    background-color: var(--gold-soft);
+    box-shadow: 0 6px 26px rgba(201, 169, 110, 0.4);
+    transform: translateY(-2px);
+  }
+  .btn-primary:active {
+    transform: translateY(0) scale(0.98);
+    background-color: var(--gold-deep);
+  }
+  .btn-primary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold);
+  }
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: var(--min-touch-target, 44px);
+    min-width: var(--min-touch-target, 44px);
+    padding: 0.75rem 1.75rem;
+    border-radius: var(--radius-full, 9999px);
+    border: 1px solid rgba(201, 169, 110, 0.4);
+    background-color: rgba(20, 18, 26, 0.5);
+    color: var(--ivory);
+    font-family: var(--font-caps);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: var(--text-xs);
+    transition: all var(--duration-normal, 200ms) var(--ease-lux);
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn-secondary:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background-color: rgba(201, 169, 110, 0.1);
+    transform: translateY(-2px);
+  }
+  .btn-secondary:active {
+    transform: translateY(0) scale(0.98);
+    border-color: var(--gold-deep);
+  }
+  .btn-secondary:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--gold);
+  }
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+  }
+
   /* Material-aware panel: glass for air/fire/water, soft neumorphism for earth. */
   .surface {
     background: color-mix(in oklab, var(--color-surface) calc(var(--glass-alpha) * 100%), transparent);
@@ -200,11 +443,22 @@
     font-style: italic;
   }
 
-  /* Gold hairline divider. */
+  /* Gold hairline divider (12-20% opacity). */
   .hairline {
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--color-accent), transparent);
-    opacity: 0.6;
+    background: linear-gradient(90deg, transparent, rgba(201, 169, 110, 0.18), transparent);
+  }
+  .hairline-solid {
+    border-color: rgba(201, 169, 110, 0.16);
+  }
+  .hairline-card {
+    border: 1px solid rgba(201, 169, 110, 0.14);
+  }
+  .bottle-glow {
+    filter: drop-shadow(0 0 24px color-mix(in oklab, var(--z-glow, #c9a96e) 30%, transparent));
+  }
+  .font-rashi {
+    font-family: var(--font-rashi);
   }
 
   /* Luxury grain texture (static SVG noise, 3% strength). */
@@ -227,17 +481,17 @@
     color: transparent;
   }
 
-  /* Sign-tinted aurora background with rich celestial luminosity */
+  /* Subtle celestial nebula ambient background (deep obsidian luxury) */
   .aurora {
     position: absolute;
     inset: -20%;
     pointer-events: none;
     background:
-      radial-gradient(50% 45% at 20% 28%, color-mix(in oklab, var(--z-glow) 38%, rgba(36, 58, 106, 0.55)), transparent 75%),
-      radial-gradient(45% 42% at 80% 22%, color-mix(in oklab, var(--z-g3) 38%, rgba(196, 160, 68, 0.35)), transparent 72%),
-      radial-gradient(55% 50% at 50% 85%, color-mix(in oklab, var(--z-primary) 32%, transparent), transparent 75%);
-    filter: blur(50px);
-    animation: var(--animate-aurora);
+      radial-gradient(50% 45% at 20% 28%, color-mix(in oklab, var(--z-glow, rgba(201,169,110,0.06)) 12%, transparent), transparent 75%),
+      radial-gradient(45% 42% at 80% 22%, rgba(201, 169, 110, 0.05), transparent 72%),
+      radial-gradient(55% 50% at 50% 85%, color-mix(in oklab, var(--z-primary, rgba(201,169,110,0.06)) 10%, transparent), transparent 75%);
+    filter: blur(80px);
+    opacity: 0.5;
   }
 
   /* Light sweep across a card on hover. */
@@ -270,10 +524,11 @@
 
   .eyebrow {
     font-family: var(--font-caps);
-    letter-spacing: 0.28em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    font-size: 0.72rem;
-    color: var(--color-accent);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-gold);
   }
 }
 
@@ -320,6 +575,7 @@
     .zodiac-ring {
       animation: ring-turn linear both;
       animation-timeline: scroll(root block);
+      will-change: transform;
     }
   }
 }
@@ -332,7 +588,8 @@
   to { translate: 0 calc(var(--pr-speed, 0) * -150vh); }
 }
 @keyframes ring-turn {
-  to { rotate: 100deg; }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(140deg); }
 }
 
 /* Pointer depth (components/motion/PointerDepth): desktop mice only. */
@@ -499,3 +756,61 @@ main [data-list-row][data-kbd] {
   background: rgb(14 165 233 / 0.08);
   box-shadow: inset 2px 0 0 rgb(14 165 233);
 }
+
+/* ── Luxury Scroll Reveal: 24px fade up with 80ms stagger ── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(var(--reveal-y, 24px));
+  transition: opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0s);
+  will-change: opacity, transform;
+}
+
+[data-reveal][data-shown] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Luxury Button Soft Shine Sweep ── */
+.btn-shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine-sweep::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.24) 50%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  transition: left 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.btn-shine-sweep:hover::after {
+  left: 180%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-shine-sweep::after {
+    display: none !important;
+  }
+}
+

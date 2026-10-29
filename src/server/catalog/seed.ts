@@ -171,7 +171,7 @@ const discoveryCoffret: ProductDTO = {
   description:
     "Twelve 2 ml vials of every Aaliqadr signature, arranged as the zodiac wheel in a keepsake coffret. Wear one sign a day and let your skin decide.",
   noteFamilies: [],
-  includes: SIGNS.map((s) => ({ name: `${s.glyph} ${s.fragrance.name}`, detail: `${s.name} · 2 ml` })),
+  includes: SIGNS.map((s) => ({ name: s.fragrance.name, detail: `${s.name} (${s.rashi}) · 2 ml` })),
   variants: [
     { sku: "AQ-DSC-24", label: "12 × 2 ml", optionValues: [], mediaIds: [], volumeMl: 24, mrpP: 219900, priceP: 199900, stock: 60, lowStockThreshold: 10, weightG: 320, isActive: true, codAllowed: false, maxPerOrder: 3 },
   ],

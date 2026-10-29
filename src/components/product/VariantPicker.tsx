@@ -9,7 +9,9 @@ import { isAvailable, resolveVariant, type ProductOption } from "@/lib/variants"
 import { cx as cn } from "@/lib/cx";
 import { coverFor } from "@/lib/variant-media";
 import type { MediaItem } from "@/server/catalog/types";
-import { Price } from "./Price";
+import { motion } from "framer-motion";
+import { RollingNumberPrice } from "./RollingNumberPrice";
+import { triggerFlyToCart } from "@/components/cart/FlyingCartThumbnail";
 import { useProductState } from "./ProductState";
 
 /**
@@ -38,6 +40,14 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
   const [showBar, setShowBar] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Sync size selection to bottle scale (10ml = 0.93, 50ml = 1.0, 100ml = 1.06)
+  useEffect(() => {
+    if (!selected) return;
+    const vol = selected.volumeMl ?? (selected.label.includes("100") ? 100 : selected.label.includes("10") ? 10 : 50);
+    const scale = vol <= 15 ? "0.93" : vol >= 90 ? "1.06" : "1.0";
+    document.documentElement.style.setProperty("--bottle-size-scale", scale);
+  }, [selected]);
+
   useEffect(() => {
     const el = buttonRef.current;
     if (!el) return;
@@ -53,7 +63,14 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
     if (!selected || soldOut) return;
     cart.add({ sku: selected.sku, slug }, 1, selected.maxPerOrder);
     setAdded(true);
-    window.setTimeout(() => setAdded(false), 1800);
+    if (buttonRef.current) {
+      const cover = coverFor(mediaSource, selected.sku);
+      triggerFlyToCart(buttonRef.current, cover?.url);
+    }
+    window.setTimeout(() => {
+      cart.openDrawer();
+    }, 800);
+    window.setTimeout(() => setAdded(false), 2400);
   }
 
   // Products without options but with several variants (legacy) pick by label.
@@ -95,7 +112,7 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
                   onClick={() => pick(a, value)}
                   onPointerEnter={() => preload(match?.sku)}
                   onFocus={() => preload(match?.sku)}
-                  className={cn("flex min-w-24 flex-col items-start rounded-xl border px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-35", out && !on && "opacity-60")}
+                  className={cn("relative flex min-w-24 flex-col items-start rounded-xl border px-4 py-3 text-left transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-35", out && !on && "opacity-60")}
                   style={{ borderColor: on ? "var(--z-primary)" : "var(--glass-border)", background: on ? "color-mix(in oklab, var(--z-primary) 14%, transparent)" : "transparent" }}
                 >
                   {swatch && !swatch.url.endsWith(".svg") && (
@@ -104,6 +121,15 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
                   )}
                   <span className={cn("text-sm font-medium", out && "line-through decoration-1")}>{value}</span>
                   {showMl ? <span className="text-xs text-muted">{formatPrice(pricePerMl(match.priceP, match.volumeMl))}/ml</span> : out ? <span className="text-xs text-muted">Sold out</span> : null}
+
+                  {/* Sliding gold underline for selected option */}
+                  {on && (
+                    <motion.span
+                      layoutId={`active-option-indicator-${axis.name}`}
+                      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      className="absolute bottom-0 inset-x-2 h-[2px] bg-gold"
+                    />
+                  )}
                 </button>
               );
             })}
@@ -111,15 +137,18 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
         </fieldset>
       ))}
 
-      <div className="flex flex-col gap-1">
-        <Price priceP={selected.priceP} mrpP={selected.mrpP} className="text-2xl" />
-        <p className="text-xs text-muted">MRP inclusive of all taxes · {selected.label}</p>
+      <div className="flex flex-col gap-1.5 pt-1">
+        <RollingNumberPrice priceP={selected.priceP} className="font-display text-3xl sm:text-4xl text-ivory font-light" />
+        <p className="text-xs text-muted/90 font-light">MRP inclusive of all taxes · {selected.label}</p>
         {soldOut ? (
           <p className="text-xs text-accent">This option is sold out. Choose another, or check back soon.</p>
         ) : selected.stock <= 5 ? (
-          <p className="text-xs text-accent">Only {selected.stock} left</p>
+          <p className="text-xs text-accent">Only {selected.stock} left in vault</p>
         ) : (
-          <p className="flex items-center gap-1.5 text-xs text-muted"><span className="size-1.5 rounded-full bg-emerald-400" aria-hidden /> In stock, ships in 1–2 working days</p>
+          <p className="flex items-center gap-2 text-xs text-ivory/80 pt-0.5">
+            <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" aria-hidden />
+            <span>In stock, ships in 1–2 working days</span>
+          </p>
         )}
       </div>
 
@@ -128,11 +157,33 @@ export function VariantPicker({ slug, name, options, media = [], imageAxis, shar
         type="button"
         onClick={add}
         disabled={soldOut}
-        className="group relative inline-flex h-14 items-center justify-center gap-3 overflow-hidden rounded-full px-8 font-caps text-xs uppercase tracking-[0.24em] transition-[transform,box-shadow] duration-300 ease-ember hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50"
+        className="group relative inline-flex h-14 min-h-[52px] sm:min-h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-full px-8 font-caps text-xs sm:text-[13px] uppercase tracking-[0.22em] font-semibold transition-all duration-300 ease-ember hover:-translate-y-0.5 active:translate-y-0 active:scale-98 disabled:cursor-not-allowed disabled:opacity-50 shadow-[0_0_24px_rgba(201,169,110,0.25)]"
         style={ctaStyle}
       >
         <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-        {added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}
+        {added ? (
+          <motion.svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden
+            className="text-current"
+          >
+            <motion.path
+              d="M3.5 8.5L6.5 11.5L12.5 4.5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </motion.svg>
+        ) : (
+          <ShoppingBag className="size-4" />
+        )}
         <span aria-live="polite">{cta}</span>
       </button>
 

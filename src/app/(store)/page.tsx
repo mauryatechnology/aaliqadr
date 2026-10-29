@@ -1,30 +1,21 @@
 import type { Metadata } from "next";
-import { HomeBanners } from "@/components/content/HomeBanners";
-import Image from "next/image";
 import Link from "next/link";
-import { cacheLife } from "next/cache";
-import { ArrowRight, ChevronDown, Gift, HelpCircle, ShieldCheck, Sparkles, Truck } from "lucide-react";
-import { ELEMENT_INFO, ELEMENTS, ZODIAC } from "@/config/zodiac";
-import { site } from "@/config/site";
-import { currentSeasonSign, formatSignDates } from "@/lib/zodiac-math";
-import { formatPrice } from "@/lib/money";
 import { faqLd, JsonLd, organizationLd, websiteLd } from "@/lib/jsonld";
-import { getProductBySlug, getProductCards } from "@/server/queries/catalog";
-import { ZodiacWheel } from "@/components/zodiac/ZodiacWheel";
-import { ZodiacScope } from "@/components/zodiac/ZodiacScope";
-import { AmbientLayer } from "@/components/zodiac/AmbientLayer";
-import { BottleArt } from "@/components/zodiac/BottleArt";
-import { ProductCard } from "@/components/product/ProductCard";
+import { getProductCards } from "@/server/queries/catalog";
 import { Reveal } from "@/components/motion/Reveal";
-import { Parallax } from "@/components/motion/Parallax";
-import { Depth, PointerDepth } from "@/components/motion/PointerDepth";
-import { ButtonLink } from "@/components/ui/ButtonLink";
-import { routes } from "@/lib/routes";
+import { HeroLuxury } from "@/components/home/HeroLuxury";
+import { EditorialMarqueeTicker } from "@/components/home/EditorialMarqueeTicker";
+import { CosmicRashiStrip } from "@/components/home/CosmicRashiStrip";
+import { FeaturedLuxuryFragrances } from "@/components/home/FeaturedLuxuryFragrances";
+import { ShopByElement } from "@/components/home/ShopByElement";
+import { BrandStorySplit } from "@/components/home/BrandStorySplit";
+import { FirstOrderPromoBanner } from "@/components/home/FirstOrderPromoBanner";
+import { BrandCraftSection } from "@/components/home/BrandCraftSection";
 
 export const metadata: Metadata = {
   title: "Aaliqadr: Luxury Zodiac Perfumes & Extrait de Parfum | Crafted for Your Rashi",
   description:
-    "Explore twelve luxury Extrait de Parfum signatures crafted for the twelve zodiac signs and Vedic rashis. 28% oil concentration for 12+ hour longevity. Free shipping across India.",
+    "Twelve luxury Extrait de Parfum signatures crafted for the twelve zodiac signs and Vedic rashis. 28% oil concentration for 12+ hour longevity. Free shipping across India.",
   keywords: [
     "zodiac perfume",
     "rashi perfume",
@@ -44,6 +35,7 @@ export const metadata: Metadata = {
     description:
       "Twelve bespoke signatures, one for every rashi. Extrait de Parfum with 28% concentration made in India.",
     url: "/",
+    type: "website",
   },
 };
 
@@ -54,339 +46,177 @@ const HOME_FAQS = [
       "Every Aaliqadr fragrance is formulated around the element (Fire, Earth, Air, Water), ruling planet, and temperament of its sign. You can find your fragrance by selecting your Western sun sign or your Vedic Chandra rashi using our Find My Sign calculator, or simply by exploring the notes of your ruling element.",
   },
   {
-    question: "What is the difference between Extrait de Parfum and Eau de Parfum (EDP)?",
+    question: "What is an Extrait de Parfum and how does 28% concentration compare?",
     answer:
-      "Extrait de Parfum is the highest concentration of fragrance in fine perfumery, containing 20% to 30% pure perfume oils (Aaliqadr formulations feature 28% concentration). Standard Eau de Parfum (EDP) contains only 12% to 18%. This concentration ensures rich scent evolution and 12+ hours of wear time on skin and textiles.",
+      "An Extrait de Parfum contains 20% to 40% aromatic fragrance oils. At 28% oil concentration, Aaliqadr sits at the highest tier of luxury perfumery (substantially richer than standard Eau de Parfum at 15–20%). This ensures intimate projection, slow unfolding, and 12+ hours of lingering presence on skin and fabric.",
   },
   {
-    question: "How long does Aaliqadr Extrait de Parfum last on skin and fabric?",
+    question: "Are your fragrance oils natural, IFRA-compliant, and artisanal?",
     answer:
-      "Due to our 28% oil concentration and artisanal maceration in small batches, Aaliqadr Extraits last 12 to 16 hours on skin and up to 24 hours on natural fabric, with strong yet refined projection and lasting sillage.",
+      "Yes. We compose using wild-harvested botanicals, noble absolutes, and responsibly aged resins alongside safe, bio-identical aroma molecules. All formulas are rigorously IFRA-certified, cruelty-free, hand-poured in small batches, and aged for forty-five days to achieve celestial balance.",
   },
   {
-    question: "Can I gift a zodiac perfume if I don't know the recipient's fragrance preferences?",
+    question: "How does complimentary climate-controlled shipping work across India?",
     answer:
-      "Yes. A zodiac fragrance is one of the most thoughtful, personalized gifts because it is chosen based on birth date and astrological identity rather than random guesswork. Each bottle comes in a presentation box with an astrological profile card and complimentary handwritten gift message.",
+      "Fine natural fragrances are sensitive to extreme heat and transit shocks. Every Aaliqadr order is packaged in insulated, thermal-protected outer cartons and shipped via express air partners across Pan-India with real-time GPS tracking and signature on delivery.",
   },
   {
-    question: "Can I try all twelve zodiac perfumes before committing to a full bottle?",
+    question: "Can I sample all twelve signatures before buying a 50ml flacon?",
     answer:
       "Yes! Our Zodiac Discovery Coffret features luxury miniature flacons of all twelve signatures. It allows you to explore the full astrological wheel, layer compatible signs, and find your favorite signature from home.",
   },
   {
-    question: "Are Aaliqadr perfumes IFRA compliant and skin-safe?",
+    question: "What is the return and authenticity guarantee policy?",
     answer:
-      "All Aaliqadr fragrances are formulated with premium botanical extracts and safe aroma molecules in compliance with International Fragrance Association (IFRA) standards. They are cruelty-free, paraben-free, and bottled with genuine batch numbers in India.",
+      "Every bottle arrives with a tamper-evident gold seal and a matching 2ml sample vial. You can test the sample first; if the fragrance does not resonate with your spirit, you may return the unopened 50ml flacon within 7 days for a full refund.",
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const products = (await getProductCards()).filter((p) => p.type === "fragrance");
+
   return (
-    <>
-      <Hero />
-      <SeasonSpotlight />
-      <HomeBanners />
-      <Signatures />
-      <Elements />
-      <Coffret />
-      <Craft />
+    <div className="relative overflow-clip text-ivory bg-[#060508]">
+      {/* 1. Ultra-Luxury Hero: "Your Rashi. Your Signature Scent." */}
+      <HeroLuxury />
+
+      {/* 2. Editorial Kinetic Marquee Ticker (zodiacperfumes.com high-fashion style) */}
+      <EditorialMarqueeTicker />
+
+      {/* 3. Choose Your Rashi: 12 Rashi Quick Selector Strip in Warm Parchment */}
+      <CosmicRashiStrip />
+
+      {/* 4. Featured Collection: Luxury Fragrances with Element Tabs & direct Add-to-Cart */}
+      <FeaturedLuxuryFragrances products={products} />
+
+      {/* 5. Shop by Element: Fire, Earth, Air, Water (White/Warm Parchment Theme) */}
+      <ShopByElement />
+
+      {/* 6. Brand Story & 4 Pillars Split: Where Fragrance Meets Astrology */}
+      <BrandStorySplit />
+
+      {/* 7. First Order Promotion Banner: Get 10% Off with WELCOME10 */}
+      <FirstOrderPromoBanner />
+
+      {/* 8. Brand Craft & Monogram Heritage: The Drop that Holds a Sky (Black Luxury Theme) */}
+      <BrandCraftSection />
+
+      {/* 9. Haute-Parfumerie Atelier Inquiries & FAQ (White / Warm-Parchment Theme) */}
       <HomeFaq />
-      <Trust />
+
+      {/* Structured SEO Schema */}
       <JsonLd data={websiteLd()} />
       <JsonLd data={organizationLd()} />
       <JsonLd data={faqLd(HOME_FAQS)} />
-    </>
+    </div>
   );
 }
 
-function Hero() {
-  return (
-    <PointerDepth className="grain vignette relative isolate overflow-clip">
-      <Depth strength={-26} className="absolute inset-0 -z-10">
-        <div aria-hidden className="aurora opacity-75" />
-      </Depth>
+const ROMAN_NUMERALS = ["I", "II", "III", "IV", "V", "VI"];
 
-      {/* Radiant celestial ambient light effects */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        {/* Warm golden aura behind the zodiac wheel */}
-        <div
-          className="animate-celestial-glow absolute -right-[8%] top-1/2 -translate-y-1/2 h-[760px] w-[760px] rounded-full blur-[90px]"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(196,160,68,0.36) 0%, rgba(212,175,55,0.18) 40%, rgba(50,75,130,0.15) 65%, transparent 75%)",
-          }}
-        />
-        {/* Radiant celestial illumination directly illuminating the headline & content */}
-        <div
-          className="absolute -left-[5%] top-[15%] h-[680px] w-[680px] rounded-full blur-[110px]"
-          style={{
-            background:
-              "radial-gradient(circle at 45% 45%, rgba(212,175,55,0.26) 0%, rgba(196,160,68,0.16) 38%, rgba(42,70,128,0.22) 65%, transparent 80%)",
-          }}
-        />
-        {/* Central divine light bloom */}
-        <div
-          className="absolute left-1/2 top-1/3 -translate-x-1/2 -translate-y-1/2 h-[550px] w-[1000px] blur-[130px] opacity-50"
-          style={{
-            background: "radial-gradient(ellipse at center, rgba(212,175,55,0.22) 0%, rgba(196,160,68,0.1) 45%, transparent 70%)",
-          }}
-        />
+/**
+ * Frequently Asked Questions (Haute-Parfumerie Atelier Inquiries)
+ * - White / Warm-Parchment Luxury Theme (#FAF7F2)
+ * - Pure white cards with delicate champagne borders (#E8E2D5)
+ * - Warm antique gold Roman numerals & high-contrast typography
+ */
+function HomeFaq() {
+  return (
+    <section className="relative overflow-hidden bg-[#FAF7F2] text-[#17130F] py-16 sm:py-20 lg:py-28 border-t border-[#E8E2D5]">
+      {/* Subtle warm champagne ambient glow */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[450px] w-full max-w-[1000px] bg-gradient-to-r from-transparent via-[#73531F]/[0.06] to-transparent blur-[70px]" />
       </div>
 
-      <div className="mx-auto grid min-h-[calc(100dvh-5rem)] max-w-[1360px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:py-10">
-        <Parallax speed={-0.18}>
-          <Depth strength={6} className="flex flex-col items-start gap-7">
-            <p className="eyebrow text-gold-light/95 tracking-[0.28em] font-medium text-xs drop-shadow-[0_2px_10px_rgba(212,175,55,0.3)]">
-              Extrait de Parfum · Twelve signs · Made in India
-            </p>
-            <h1 className="font-display text-[clamp(2.75rem,7vw,6.25rem)] leading-[0.95] tracking-tight text-ivory drop-shadow-[0_4px_30px_rgba(0,0,0,0.7)]">
-              A fragrance
-              <br />
-              <em className="text-foil animate-shimmer not-italic drop-shadow-[0_0_35px_rgba(212,175,55,0.4)]">
-                written in your stars
-              </em>
-            </h1>
-            <p className="text-ivory/85 max-w-lg text-base sm:text-lg font-light leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.85)]">
-              Twelve signatures, one for every rashi. Each composed around the element, planet and temperament of its sign.
-            </p>
-            <div className="flex flex-wrap items-center gap-3.5 pt-1">
-              <ButtonLink href="/find-my-sign" className="shadow-[0_0_28px_rgba(196,160,68,0.35)] hover:shadow-[0_0_38px_rgba(212,175,55,0.55)] transition-shadow">
-                Find my sign <ArrowRight className="size-4" />
-              </ButtonLink>
-              <ButtonLink href="/zodiac" variant="ghost" className="border border-[var(--glass-border)] bg-surface/40 hover:bg-surface/70 hover:border-gold/50 text-ivory">
-                Explore the zodiac
-              </ButtonLink>
-            </div>
-          </Depth>
-        </Parallax>
-        <Parallax speed={0.22}>
-          <Depth strength={16}>
-            <ZodiacWheel />
-          </Depth>
-        </Parallax>
-      </div>
-    </PointerDepth>
-  );
-}
-
-/** The sign currently in season. Cached for a day so it changes on its own at each ingress. */
-async function SeasonSpotlight() {
-  "use cache";
-  cacheLife("days");
-  const sign = currentSeasonSign(new Date());
-  const product = await getProductBySlug(sign.fragrance.slug);
-  const from = product?.variants.reduce((m, v) => Math.min(m, v.priceP), Number.POSITIVE_INFINITY);
-  return (
-    <ZodiacScope sign={sign.slug} className="overflow-clip">
-      <Parallax speed={-0.45} className="absolute inset-x-0 -inset-y-28 -z-10">
-        <AmbientLayer sign={sign.slug} intensity={0.7} />
-      </Parallax>
-      <div className="mx-auto grid max-w-[1360px] grid-cols-1 items-center gap-10 px-4 py-24 sm:px-6 md:grid-cols-2 lg:py-32">
-        <Reveal className="order-2 flex flex-col items-start gap-5 md:order-1">
-          <p className="eyebrow">
-            It&apos;s {sign.name} season · {formatSignDates(sign)}
+      <div className="relative mx-auto max-w-[960px] px-4 sm:px-6 lg:px-8 z-10">
+        {/* Editorial Section Header */}
+        <Reveal className="mb-14 sm:mb-16 text-center">
+          <p className="font-caps text-xs sm:text-[13px] tracking-[0.28em] text-[#73531F] font-semibold uppercase mb-3 flex items-center justify-center gap-2">
+            <span aria-hidden className="text-[#73531F] text-[10px]">✦</span>
+            <span>ATELIER INQUIRIES</span>
+            <span aria-hidden className="text-[#73531F] text-[10px]">✦</span>
           </p>
-          <h2 className="font-display text-5xl leading-none sm:text-6xl">{sign.fragrance.name}</h2>
-          <p className="text-muted max-w-md text-lg">{sign.fragrance.tagline}.</p>
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {[sign.element, sign.rulingPlanet, sign.fragrance.mood].map((t) => (
-              <li key={t} className="rounded-full border border-[var(--glass-border)] px-3 py-1 capitalize">
-                {t}
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-wrap items-center gap-4 pt-2">
-            <ButtonLink href={routes.product(sign.fragrance.slug)}>
-              Discover {sign.name}
-              {from && Number.isFinite(from) ? ` · from ${formatPrice(from)}` : ""}
-            </ButtonLink>
-            <Link href={routes.sign(sign.slug)} className="text-muted hover:text-fg text-sm underline-offset-4 hover:underline">
-              Read the {sign.name} story
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-normal text-[#17130F] tracking-tight">
+            Understanding Aaliqadr
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-[#423B33] font-normal max-w-[65ch] mx-auto leading-relaxed">
+            Essential knowledge regarding our 28% Extrait de Parfum signatures, astrological alchemy, and artisanal bottling.
+          </p>
+        </Reveal>
+
+        {/* Crisp White Luxury Accordion Cards */}
+        <div className="space-y-4">
+          {HOME_FAQS.map((faq, i) => (
+            <Reveal key={faq.question} delay={i * 0.05}>
+              <details
+                className="group relative overflow-hidden rounded-2xl border border-[#E8E2D5] bg-white p-6 sm:p-7 shadow-[0_4px_16px_rgba(0,0,0,0.02)] transition-all duration-300 ease-lux hover:border-[#73531F]/40 hover:shadow-[0_8px_24px_rgba(115,83,31,0.08)] open:border-[#73531F]/60 open:shadow-[0_12px_32px_rgba(115,83,31,0.12)]"
+                open={i === 0}
+              >
+                {/* Subtle warm cream-gold ambient gradient on open */}
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#FFFDF9] to-white opacity-0 transition-opacity duration-300 group-open:opacity-100"
+                />
+
+                {/* Summary / Question Header */}
+                <summary className="relative z-10 flex cursor-pointer list-none items-center justify-between gap-4 text-left [&::-webkit-details-marker]:hidden">
+                  <div className="flex items-center gap-3.5 sm:gap-4.5">
+                    {/* Roman Numeral Index */}
+                    <span className="font-caps text-xs sm:text-[13px] font-semibold tracking-[0.25em] text-[#73531F] select-none shrink-0">
+                      {ROMAN_NUMERALS[i] ?? `0${i + 1}`}
+                    </span>
+                    <span aria-hidden className="hidden sm:inline-block h-3.5 w-px bg-[#73531F]/25 shrink-0" />
+                    {/* Question text */}
+                    <span className="font-display text-lg sm:text-xl font-normal text-[#17130F] transition-colors duration-200 group-hover:text-[#73531F]">
+                      {faq.question}
+                    </span>
+                  </div>
+
+                  {/* Circular Gold Toggle Button */}
+                  <span className="relative flex size-8 sm:size-9 shrink-0 items-center justify-center rounded-full border border-[#73531F]/30 bg-[#73531F]/10 text-[#73531F] transition-all duration-300 group-hover:border-[#73531F] group-hover:bg-[#73531F] group-hover:text-white group-open:rotate-180 group-open:bg-[#73531F] group-open:text-white shadow-xs">
+                    <svg
+                      className="size-3.5 stroke-[2]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </span>
+                </summary>
+
+                {/* Answer Content */}
+                <div className="relative z-10 mt-4.5 pt-4.5 border-t border-[#E8E2D5]">
+                  <p className="text-base font-normal text-[#2E2822] leading-relaxed pl-1 sm:pl-7 max-w-[65ch]">
+                    {faq.answer}
+                  </p>
+                </div>
+              </details>
+            </Reveal>
+          ))}
+        </div>
+
+        {/* Concierge Inquiries Note */}
+        <Reveal delay={0.25} className="mt-12 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#E8E2D5] bg-white px-6 sm:px-8 py-3.5 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+            <span className="text-xs sm:text-sm text-[#423B33] font-normal">
+              Have a question regarding your astrological placement or bespoke gifting?
+            </span>
+            <Link
+              href="/contact"
+              className="text-xs sm:text-sm font-medium text-[#73531F] hover:text-[#5E4723] underline underline-offset-4 decoration-[#73531F]/40 hover:decoration-[#73531F] transition-colors"
+            >
+              Consult our Concierge →
             </Link>
           </div>
         </Reveal>
-        <Reveal className="order-1 mx-auto w-full max-w-xs md:order-2 md:max-w-sm" delay={0.1}>
-          <Parallax speed={0.35}>
-            <PointerDepth>
-              <Depth strength={18}>
-                <BottleArt sign={sign.slug} preload className="animate-float drop-shadow-[0_30px_60px_rgba(0,0,0,.55)]" />
-              </Depth>
-            </PointerDepth>
-          </Parallax>
-        </Reveal>
       </div>
-    </ZodiacScope>
-  );
-}
-
-async function Signatures() {
-  const cards = (await getProductCards()).filter((p) => p.type === "fragrance");
-  return (
-    <section className="mx-auto max-w-[1360px] px-4 py-24 sm:px-6">
-      <Reveal className="mb-12 flex flex-col items-center gap-4 text-center">
-        <Parallax speed={-0.12} className="flex flex-col items-center gap-4">
-          <p className="eyebrow text-gold-light/90">The Signatures</p>
-          <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">Twelve signs. Twelve stories.</h2>
-          <p className="text-ivory/80 max-w-xl text-base sm:text-lg font-light leading-relaxed">
-            Every bottle is rendered in the colours of its sign. Choose by your rashi, or simply by the notes you love.
-          </p>
-        </Parallax>
-      </Reveal>
-      <ul className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
-        {cards.map((p, i) => (
-          <li key={p.id}>
-            <ProductCard product={p} priority={i < 2} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function Elements() {
-  const ambient = { fire: "aries", earth: "taurus", air: "libra", water: "pisces" } as const;
-  return (
-    <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
-      <Reveal className="mb-10 flex flex-col gap-3">
-        <p className="eyebrow text-gold-light/90">Shop by element</p>
-        <h2 className="font-display text-3xl sm:text-4xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">Fire, Earth, Air, Water</h2>
-      </Reveal>
-      <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {ELEMENTS.map((el, i) => {
-          const info = ELEMENT_INFO[el];
-          return (
-            <Reveal as="li" key={el} delay={i * 0.08}>
-              <Link
-                href={`/shop?element=${el}`}
-                data-zodiac={ambient[el]}
-                data-element={el}
-                className="surface group relative flex min-h-40 flex-col justify-end gap-1.5 overflow-clip p-4 sm:min-h-56 sm:gap-2 sm:p-6"
-              >
-                <div
-                  aria-hidden
-                  className="absolute inset-0 -z-10 opacity-70 transition-opacity duration-700 group-hover:opacity-100"
-                  style={{ background: "radial-gradient(90% 80% at 80% 0%, var(--z-g2), transparent 70%)" }}
-                />
-                <span className="flex gap-1 text-lg sm:gap-2 sm:text-2xl" style={{ color: "var(--z-primary)" }} aria-hidden>
-                  {info.signs.map((s) => `${ZODIAC[s].glyph}︎`).join(" ")}
-                </span>
-                <h3 className="font-display text-xl sm:text-3xl text-ivory">{info.label}</h3>
-                <p className="line-clamp-2 text-xs text-ivory/70 sm:text-sm font-light">{info.scent}</p>
-                <span className="text-accent mt-1 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.18em] sm:mt-2 sm:text-xs">
-                  Shop {info.label.toLowerCase()} <ArrowRight className="size-3 transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-            </Reveal>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-async function Coffret() {
-  const p = await getProductBySlug("zodiac-discovery-coffret");
-  if (!p) return null;
-  const v = p.variants[0];
-  return (
-    <section className="mx-auto max-w-[1360px] px-4 py-16 sm:px-6">
-      <Reveal className="surface relative grid grid-cols-1 items-center gap-8 overflow-clip p-8 sm:p-12 md:grid-cols-[1fr_auto]">
-        <Parallax speed={-0.4} className="absolute inset-x-0 -inset-y-24 -z-10">
-          <div aria-hidden className="aurora opacity-60" />
-        </Parallax>
-        <div className="flex flex-col gap-4">
-          <p className="eyebrow text-gold-light/90">Not sure yet?</p>
-          <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">{p.name}</h2>
-          <p className="text-ivory/80 max-w-xl text-base sm:text-lg font-light">{p.tagline}.</p>
-        </div>
-        <div className="flex flex-col items-start gap-3 md:items-end">
-          {v && <span className="font-display text-3xl">{formatPrice(v.priceP)}</span>}
-          <ButtonLink href={routes.product(p.slug)}>
-            <Gift className="size-4" /> Explore the coffret
-          </ButtonLink>
-        </div>
-      </Reveal>
-    </section>
-  );
-}
-
-function Craft() {
-  return (
-    <section className="mx-auto grid max-w-[1360px] grid-cols-1 items-center gap-12 px-4 py-24 sm:px-6 md:grid-cols-2">
-      <Reveal className="mx-auto w-full max-w-md">
-        <Parallax speed={0.3} className="relative aspect-square w-full">
-          <Image
-            src="/brand/logo-embossed-ivory.png"
-            alt="The Aaliqadr monogram embossed on ivory card"
-            fill
-            quality={85}
-            sizes="(min-width: 768px) 40vw, 90vw"
-            className="object-contain drop-shadow-[0_40px_60px_rgba(0,0,0,.5)]"
-          />
-        </Parallax>
-      </Reveal>
-      <Reveal className="flex flex-col gap-5" delay={0.1}>
-        <p className="eyebrow text-gold-light/90">Our craft</p>
-        <h2 className="font-display text-4xl sm:text-5xl text-ivory drop-shadow-[0_2px_20px_rgba(0,0,0,0.6)]">The drop that holds a sky</h2>
-        <p className="text-ivory/80 leading-relaxed font-light text-base sm:text-lg">
-          Our monogram joins the letters alif and qaf into a single drop of perfume, shaped like a flame. {site.name} means high esteem: we
-          compose every signature as an Extrait de Parfum, with a concentration made to stay with you from morning to the last star.
-        </p>
-        <ButtonLink href="/about" variant="ghost" className="self-start">
-          Read our story
-        </ButtonLink>
-      </Reveal>
-    </section>
-  );
-}
-
-function HomeFaq() {
-  return (
-    <section className="mx-auto max-w-4xl px-4 py-20 sm:px-6">
-      <Reveal className="mb-12 flex flex-col items-center gap-3 text-center">
-        <p className="eyebrow flex items-center gap-1.5">
-          <HelpCircle className="size-3.5 text-gold" /> Frequently asked questions
-        </p>
-        <h2 className="font-display text-4xl sm:text-5xl">Understanding Aaliqadr</h2>
-        <p className="text-muted max-w-xl text-sm sm:text-base">
-          Astrology, fragrance concentrations, and gifting guidance crafted to help you find your celestial signature.
-        </p>
-      </Reveal>
-      <div className="divide-y divide-white/10 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-8">
-        {HOME_FAQS.map((faq, i) => (
-          <details key={faq.question} className="group py-5 first:pt-0 last:pb-0" open={i === 0}>
-            <summary className="font-display flex cursor-pointer list-none items-center justify-between text-left text-lg text-fg transition-colors hover:text-gold [&::-webkit-details-marker]:hidden">
-              <span className="pr-4">{faq.question}</span>
-              <ChevronDown className="size-4 shrink-0 text-muted transition-transform duration-300 group-open:rotate-180" aria-hidden />
-            </summary>
-            <p className="text-muted mt-3 text-sm leading-relaxed">{faq.answer}</p>
-          </details>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Trust() {
-  const items = [
-    { Icon: Sparkles, title: "Extrait de Parfum", text: "20–30% concentration" },
-    { Icon: Truck, title: "Free shipping", text: `On orders above ${formatPrice(site.freeShippingAboveP)}` },
-    { Icon: ShieldCheck, title: "Secure payments", text: "UPI, cards, netbanking & COD" },
-    { Icon: Gift, title: "Gift ready", text: "Wrap and a handwritten note" },
-  ];
-  return (
-    <section className="border-y border-white/5">
-      <ul className="mx-auto grid max-w-[1360px] grid-cols-2 gap-6 px-4 py-10 sm:px-6 lg:grid-cols-4">
-        {items.map(({ Icon, title, text }) => (
-          <li key={title} className="flex items-center gap-4">
-            <Icon className="text-gold size-6 shrink-0" strokeWidth={1.25} aria-hidden />
-            <div>
-              <p className="text-sm font-medium">{title}</p>
-              <p className="text-muted text-xs">{text}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

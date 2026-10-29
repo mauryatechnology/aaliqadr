@@ -71,6 +71,8 @@ export interface OrderDoc {
   status: OrderStatus;
   payment: { method: PaymentMethod; status: PaymentStatus; razorpayOrderId?: string; razorpayPaymentId?: string; paidAt?: Date; refundedP: number };
   shipment?: { courier?: string; awb?: string; trackingUrl?: string; shippedAt?: Date; deliveredAt?: Date };
+  shipmentId?: string;
+  shipmentStatus?: string;
   invoice?: { number?: string; issuedAt?: Date };
   /** Seller as printed on the invoice when it was issued (later edits don't change it). */
   seller?: { legalName: string; address: string; gstin: string; stateCode: string };
@@ -168,6 +170,8 @@ const OrderSchema = new Schema<OrderDoc>(
       shippedAt: Date,
       deliveredAt: Date,
     },
+    shipmentId: { type: String, ref: "Shipment" },
+    shipmentStatus: String,
     invoice: { number: String, issuedAt: Date },
     seller: { legalName: String, address: String, gstin: String, stateCode: String },
     reservationExpiresAt: Date,

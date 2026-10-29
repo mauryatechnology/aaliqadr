@@ -91,6 +91,7 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/brand/**", search: "" },
       { pathname: "/bottles/**", search: "" },
+      { pathname: "/images/**", search: "" },
     ],
     deviceSizes: [390, 640, 828, 1080, 1440, 1920],
     imageSizes: [96, 160, 256, 384],
